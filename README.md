@@ -2,7 +2,7 @@
 
 Platform *Lost and Found* berbasis mobile untuk civitas akademika Universitas Negeri Surabaya. Mahasiswa, dosen, dan staf dapat melaporkan serta mencari barang hilang atau ditemukan di lingkungan kampus.
 
-> Proyek mata kuliah Pemrograman Aplikasi Bergerak, Program Studi Informasi, Fakultas Teknik, UNESA (2026).
+> Proyek mata kuliah Pemrograman Aplikasi Bergerak, Program Studi Sistem Informasi, Fakultas Teknik, UNESA (2026).
 
 ## Latar Belakang
 
@@ -43,7 +43,7 @@ Desain antarmuka ada di folder [`docs/design`](docs/design).
 2. Clone repo:
    ```bash
    git clone https://github.com/MariaElvarettaCempaka/FindIT-Campus.git
-   cd findit-campus
+   cd FindIT-Campus
    flutter pub get
    ```
 3. Hubungkan ke Firebase milik tim (minta file `google-services.json` ke ketua tim, lalu taruh di `android/app/`).
@@ -54,9 +54,38 @@ Desain antarmuka ada di folder [`docs/design`](docs/design).
 
 ## Struktur Folder
 
-- `lib/` kode aplikasi (screens, services, models, widgets)
-- `docs/` proposal dan desain UI
-- `firebase/` aturan keamanan Firestore dan Storage
+```
+FindIT-Campus/
+├── lib/                      kode aplikasi Flutter
+│   ├── main.dart
+│   ├── core/                 tema, warna, konstanta
+│   ├── models/               model data (user, report)
+│   ├── services/             auth, laporan, storage, WhatsApp
+│   ├── widgets/              kartu laporan, chip kategori, bottom nav
+│   └── screens/
+│       ├── auth/             login dan register
+│       ├── home/             beranda, pencarian, filter
+│       ├── lost/             daftar barang hilang
+│       ├── found/            daftar barang ditemukan
+│       ├── post/             form buat laporan
+│       ├── detail/           detail barang, tombol WhatsApp
+│       └── profile/          riwayat, edit, ubah status
+├── android/                  konfigurasi Android (minimal Android 10)
+├── assets/                   gambar dan ikon aplikasi
+├── test/                     pengujian
+├── firebase/
+│   ├── firestore.rules       aturan keamanan database
+│   └── storage.rules         aturan unggah foto (maks. 5 MB)
+├── docs/
+│   ├── proposal/             proposal PDF
+│   ├── design/               mockup UI, user flow, peta navigasi
+│   ├── requirements.md       kebutuhan fungsional dan non-fungsional
+│   └── database.md           rancangan database
+├── pubspec.yaml              dependensi Flutter
+└── README.md
+```
+
+> Folder `android/`, `assets/`, dan file `pubspec.yaml` muncul setelah proyek dibuat dengan `flutter create`.
 
 ## Alur Kerja Tim
 
@@ -77,6 +106,7 @@ Dosen pengampu: I Gusti Lanang Putra Eka Prismana, S.Kom., M.Kom.
 
 ## Lisensi
 MIT
+
 Proyek ini dibuat untuk kebutuhan akademik pada Mata Kuliah Pemrograman Aplikasi Bergerak, Program Studi Sistem Informasi, Universitas Negeri Surabaya.
 
 © 2026 Kelompok 2, SI 2024A
