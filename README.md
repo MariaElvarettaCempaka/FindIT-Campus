@@ -1,4 +1,4 @@
-# FindIt Campus
+# FindIT Campus
 
 Platform *Lost and Found* berbasis mobile untuk civitas akademika Universitas Negeri Surabaya. Mahasiswa, dosen, dan staf dapat melaporkan serta mencari barang hilang atau ditemukan di lingkungan kampus.
 
@@ -42,7 +42,7 @@ Desain antarmuka ada di folder [`docs/design`](docs/design).
 1. Pasang [Flutter](https://docs.flutter.dev/get-started/install) dan Android Studio.
 2. Clone repo:
    ```bash
-   git clone https://github.com/USERNAME/findit-campus.git
+   git clone https://github.com/MariaElvarettaCempaka/FindIT-Campus.git
    cd findit-campus
    flutter pub get
    ```
