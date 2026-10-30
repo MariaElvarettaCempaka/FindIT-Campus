@@ -2,7 +2,7 @@
 
 Platform *Lost and Found* berbasis mobile untuk civitas akademika Universitas Negeri Surabaya. Mahasiswa, dosen, dan staf dapat melaporkan serta mencari barang hilang atau ditemukan di lingkungan kampus.
 
-> Proyek mata kuliah Program Studi Informasi, Fakultas Teknik, UNESA (2026).
+> Proyek mata kuliah Pemrograman Aplikasi Bergerak, Program Studi Informasi, Fakultas Teknik, UNESA (2026).
 
 ## Latar Belakang
 
@@ -76,5 +76,7 @@ Desain antarmuka ada di folder [`docs/design`](docs/design).
 Dosen pengampu: I Gusti Lanang Putra Eka Prismana, S.Kom., M.Kom.
 
 ## Lisensi
-
 MIT
+Proyek ini dibuat untuk kebutuhan akademik pada Mata Kuliah Pemrograman Aplikasi Bergerak, Program Studi Sistem Informasi, Universitas Negeri Surabaya.
+
+© 2026 Kelompok 2, SI 2024A
