@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'core/app_colors.dart';
 import 'core/app_dimens.dart';
 import 'core/app_theme.dart';
+import 'screens/home/home_screen.dart';
 import 'widgets/app_button.dart';
 import 'widgets/status_chip.dart';
 
@@ -21,7 +22,9 @@ class FindITCampusApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
-      home: const DesignSystemShowcase(),
+      scrollBehavior:
+          const MaterialScrollBehavior().copyWith(scrollbars: false),
+      home: const HomeScreen(),
     );
   }
 }
