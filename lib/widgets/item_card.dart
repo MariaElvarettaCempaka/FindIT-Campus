@@ -4,7 +4,7 @@ import '../core/app_colors.dart';
 import 'status_chip.dart';
 
 /// Kartu item laporan feed "Terbaru di kampus" versi Modern Rich Card (/apple-design).
-/// Dilengkapi dengan efek tactile micro-interaction (spring press scale, dynamic shadow depth, & bookmark action).
+/// Dilengkapi dengan efek tactile micro-interaction (spring press scale & dynamic shadow depth).
 class ItemCard extends StatefulWidget {
   final String title;
   final String location;
@@ -14,8 +14,6 @@ class ItemCard extends StatefulWidget {
   final IconData? icon;
   final String? snippet;
   final VoidCallback? onTap;
-  final bool initialSaved;
-  final ValueChanged<bool>? onSaveChanged;
 
   const ItemCard({
     super.key,
@@ -27,8 +25,6 @@ class ItemCard extends StatefulWidget {
     this.icon,
     this.snippet,
     this.onTap,
-    this.initialSaved = false,
-    this.onSaveChanged,
   });
 
   @override
@@ -37,14 +33,6 @@ class ItemCard extends StatefulWidget {
 
 class _ItemCardState extends State<ItemCard> {
   bool _isPressed = false;
-  late bool _isSaved;
-  bool _isBookmarkPressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _isSaved = widget.initialSaved;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +120,7 @@ class _ItemCardState extends State<ItemCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Baris Chip Status + Waktu + Bookmark Button
+                        // Baris Chip Status + Waktu
                         Row(
                           children: [
                             StatusChip(status: widget.status),
@@ -145,60 +133,6 @@ class _ItemCardState extends State<ItemCard> {
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
                                 color: const Color(0xFF7D8E89),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-
-                            // Micro Bookmark Action
-                            GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTapDown: (_) =>
-                                  setState(() => _isBookmarkPressed = true),
-                              onTapUp: (_) {
-                                setState(() {
-                                  _isBookmarkPressed = false;
-                                  _isSaved = !_isSaved;
-                                });
-                                widget.onSaveChanged?.call(_isSaved);
-                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      _isSaved
-                                          ? 'Disimpan ke bookmark'
-                                          : 'Dihapus dari bookmark',
-                                    ),
-                                    behavior: SnackBarBehavior.floating,
-                                    duration: const Duration(milliseconds: 900),
-                                  ),
-                                );
-                              },
-                              onTapCancel: () =>
-                                  setState(() => _isBookmarkPressed = false),
-                              child: AnimatedScale(
-                                scale: _isBookmarkPressed ? 0.82 : 1.0,
-                                duration: const Duration(milliseconds: 100),
-                                curve: Curves.easeOutCubic,
-                                child: Container(
-                                  width: 26,
-                                  height: 26,
-                                  decoration: BoxDecoration(
-                                    color: _isSaved
-                                        ? const Color(0xFF17695D)
-                                            .withValues(alpha: 0.12)
-                                        : Colors.transparent,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    _isSaved
-                                        ? Icons.bookmark_rounded
-                                        : Icons.bookmark_outline_rounded,
-                                    size: 17,
-                                    color: _isSaved
-                                        ? const Color(0xFF17695D)
-                                        : const Color(0xFF8C9D98),
-                                  ),
-                                ),
                               ),
                             ),
                           ],

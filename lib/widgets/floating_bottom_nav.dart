@@ -36,7 +36,7 @@ class _FloatingBottomNavState extends State<FloatingBottomNav> {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 26),
         child: Container(
           height: 64,
           decoration: BoxDecoration(

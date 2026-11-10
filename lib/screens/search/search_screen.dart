@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/smooth_page_route.dart';
 import '../../widgets/floating_bottom_nav.dart';
 import '../../widgets/item_card.dart';
 import '../../widgets/status_chip.dart';
+import '../../widgets/app_toast_stack.dart';
+import '../found/found_screen.dart';
 
 /// Halaman Pencarian Interaktif (Figma Node 181:2536, 181:2559, & 181:2664).
 /// Menggabungkan 3 state visual dinamis:
@@ -205,7 +208,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             _buildEmptyState(query),
 
                           // Spacer bawah agar konten tidak tertutup bottom navbar
-                          const SizedBox(height: 110),
+                          const SizedBox(height: 120),
                         ],
                       ),
                     ),
@@ -224,17 +227,21 @@ class _SearchScreenState extends State<SearchScreen> {
               currentIndex: _currentNavIndex,
               onTabSelected: (index) {
                 if (index == 0) {
-                  Navigator.pop(context, 0); // Kembali ke Home
+                  Navigator.popUntil(context, (route) => route.isFirst);
+                } else if (index == 2) {
+                  Navigator.pushReplacement(
+                    context,
+                    SmoothPageRoute(child: const FoundScreen()),
+                  );
                 } else {
                   setState(() => _currentNavIndex = index);
                 }
               },
               onPostTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Buka form pembuatan laporan baru'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+                AppToast.info(
+                  context,
+                  title: 'Formulir Laporan',
+                  message: 'Buka form pembuatan laporan baru.',
                 );
               },
             ),
@@ -359,7 +366,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 if (_searchController.text.isNotEmpty)
                   GestureDetector(
                     onTap: () {
-                      Navigator.pop(context, 0);
+                      _searchController.clear();
                     },
                     child: const Icon(
                       Icons.cancel_rounded,
@@ -544,14 +551,11 @@ class _SearchScreenState extends State<SearchScreen> {
             icon: item['icon'] as IconData?,
             snippet: item['description'] as String?,
             onTap: () {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                      'Detail "${item['title']}" akan dibuka oleh modul Orang 4'),
-                  behavior: SnackBarBehavior.floating,
-                  duration: const Duration(seconds: 2),
-                ),
+              AppToast.info(
+                context,
+                title: 'Detail Barang',
+                message:
+                    'Detail "${item['title']}" akan dibuka oleh modul Orang 4.',
               );
             },
           );
@@ -566,7 +570,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildEmptyState(String query) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.only(top: 60),
+        padding: const EdgeInsets.only(top: 120),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -599,7 +603,7 @@ class _SearchScreenState extends State<SearchScreen> {
             const SizedBox(height: 24),
             GestureDetector(
               onTap: () {
-                Navigator.pop(context, 0);
+                Navigator.popUntil(context, (route) => route.isFirst);
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),

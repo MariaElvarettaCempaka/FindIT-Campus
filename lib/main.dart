@@ -12,11 +12,15 @@ void main() {
 }
 
 class FindITCampusApp extends StatelessWidget {
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   const FindITCampusApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'FindIT Campus',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

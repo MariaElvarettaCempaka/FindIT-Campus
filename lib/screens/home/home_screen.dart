@@ -5,9 +5,11 @@ import '../../core/smooth_page_route.dart';
 import '../../widgets/floating_bottom_nav.dart';
 import '../../widgets/item_card.dart';
 import '../../widgets/location_command_palette.dart';
+import '../../widgets/notification_command_palette.dart';
+import '../../widgets/app_toast_stack.dart';
 import '../../widgets/status_chip.dart';
-import '../notifications/notification_screen.dart';
 import '../search/search_screen.dart';
+import '../found/found_screen.dart';
 
 /// Halaman Beranda (Home / Default & Home / Filter Active).
 /// Implementasi presisi 1:1 sesuai Figma Node 181:2788 & Node 181:2652.
@@ -158,13 +160,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToDetail(String title) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Detail "$title" akan dibuka oleh modul Orang 4'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
+    AppToast.info(
+      context,
+      title: 'Detail Barang',
+      message: 'Detail "$title" akan dibuka oleh modul Orang 4.',
     );
   }
 
@@ -201,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   _buildHeader(),
                   const SizedBox(height: 16),
                   _buildSearchBar(),
@@ -222,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
 
                   // Spacer bawah disesuaikan agar kartu terakhir tetap terbaca saat mentok di bawah dan blur saat scroll
-                  const SizedBox(height: 104),
+                  const SizedBox(height: 118),
                 ],
               ),
             ),
@@ -242,17 +241,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 } else if (index == 1) {
                   _navigateToSearch();
                 } else if (index == 2) {
-                  _navigateToSearch('ditemukan');
+                  Navigator.push(
+                    context,
+                    SmoothPageRoute(child: const FoundScreen()),
+                  ).then((_) {
+                    if (mounted) {
+                      setState(() => _currentNavIndex = 0);
+                    }
+                  });
                 } else {
                   setState(() => _currentNavIndex = index);
                 }
               },
               onPostTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Buka form pembuatan laporan baru'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+                AppToast.info(
+                  context,
+                  title: 'Formulir Laporan',
+                  message: 'Buka form pembuatan laporan baru.',
                 );
               },
             ),
@@ -307,13 +312,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     setState(() {
                       _currentLocation = selected;
                     });
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Lokasi diubah ke "$selected"'),
-                        behavior: SnackBarBehavior.floating,
-                        duration: const Duration(seconds: 1),
-                      ),
+                    AppToast.info(
+                      context,
+                      title: 'Lokasi Kampus',
+                      message: 'Lokasi aktif diubah ke "$selected".',
                     );
                   }
                 },
@@ -364,16 +366,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // Notifikasi Bell Circle (49x49) dengan Tactile Bounce & Badge Dot
         GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTapDown: (_) => setState(() => _isBellPressed = true),
-          onTapUp: (_) async {
+          onTapCancel: () => setState(() => _isBellPressed = false),
+          onTap: () async {
             setState(() => _isBellPressed = false);
-            final remainingUnread = await Navigator.push<int>(
+            final remainingUnread = await showNotificationCommandPalette(
               context,
-              SmoothPageRoute(
-                child: NotificationScreen(
-                  initialUnreadCount: _unreadNotificationCount,
-                ),
-              ),
+              initialUnreadCount: _unreadNotificationCount,
             );
             if (mounted && remainingUnread != null) {
               setState(() {
@@ -381,7 +381,6 @@ class _HomeScreenState extends State<HomeScreen> {
               });
             }
           },
-          onTapCancel: () => setState(() => _isBellPressed = false),
           child: AnimatedScale(
             scale: _isBellPressed ? 0.90 : 1.0,
             duration: const Duration(milliseconds: 110),
@@ -629,11 +628,10 @@ class _HomeScreenState extends State<HomeScreen> {
             // Tombol "+ Buat Laporan" (Node 181:2650)
             GestureDetector(
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Buka form pembuatan laporan baru'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+                AppToast.info(
+                  context,
+                  title: 'Formulir Laporan',
+                  message: 'Buka form pembuatan laporan baru.',
                 );
               },
               child: Container(
@@ -1141,17 +1139,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   _isSortPressed = false;
                   _isSortLatest = !_isSortLatest;
                 });
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      _isSortLatest
-                          ? 'Urutan: Laporan Terbaru'
-                          : 'Urutan: Laporan Terlama',
-                    ),
-                    behavior: SnackBarBehavior.floating,
-                    duration: const Duration(milliseconds: 800),
-                  ),
+                AppToast.info(
+                  context,
+                  title: 'Urutan Feed',
+                  message: _isSortLatest
+                      ? 'Menampilkan laporan terbaru.'
+                      : 'Menampilkan laporan terlama.',
                 );
               },
               onTapCancel: () => setState(() => _isSortPressed = false),
