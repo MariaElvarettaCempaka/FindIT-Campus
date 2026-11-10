@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'core/app_colors.dart';
 import 'core/app_dimens.dart';
 import 'core/app_theme.dart';
+import 'screens/home/home_screen.dart';
 import 'widgets/app_button.dart';
 import 'widgets/status_chip.dart';
 
@@ -11,17 +12,23 @@ void main() {
 }
 
 class FindITCampusApp extends StatelessWidget {
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   const FindITCampusApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'FindIT Campus',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
-      home: const DesignSystemShowcase(),
+      scrollBehavior:
+          const MaterialScrollBehavior().copyWith(scrollbars: false),
+      home: const HomeScreen(),
     );
   }
 }
