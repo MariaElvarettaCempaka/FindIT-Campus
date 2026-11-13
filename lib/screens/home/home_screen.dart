@@ -10,6 +10,7 @@ import '../../widgets/app_toast_stack.dart';
 import '../../widgets/status_chip.dart';
 import '../search/search_screen.dart';
 import '../found/found_screen.dart';
+import '../profile/profile_screen.dart';
 
 /// Halaman Beranda (Home / Default & Home / Filter Active).
 /// Implementasi presisi 1:1 sesuai Figma Node 181:2788 & Node 181:2652.
@@ -244,6 +245,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.push(
                     context,
                     SmoothPageRoute(child: const FoundScreen()),
+                  ).then((_) {
+                    if (mounted) {
+                      setState(() => _currentNavIndex = 0);
+                    }
+                  });
+                } else if (index == 3) {
+                  Navigator.push(
+                    context,
+                    SmoothPageRoute(child: const ProfileScreen()),
                   ).then((_) {
                     if (mounted) {
                       setState(() => _currentNavIndex = 0);

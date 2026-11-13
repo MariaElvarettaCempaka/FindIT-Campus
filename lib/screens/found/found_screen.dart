@@ -11,6 +11,7 @@ import '../../widgets/notification_command_palette.dart';
 import '../../widgets/app_toast_stack.dart';
 import '../../widgets/status_chip.dart';
 import '../search/search_screen.dart';
+import '../profile/profile_screen.dart';
 
 /// Halaman Barang Ditemukan (Found Screen) — FindIT Campus
 ///
@@ -1127,11 +1128,10 @@ class _FoundScreenState extends State<FoundScreen> {
                   );
                 } else if (index == 2) {
                   // Sudah di halaman Ditemukan, scroll to top
-                } else {
-                  AppToast.info(
+                } else if (index == 3) {
+                  Navigator.push(
                     context,
-                    title: 'Modul Profil',
-                    message: 'Halaman Profil dikerjakan oleh Orang 4.',
+                    SmoothPageRoute(child: const ProfileScreen()),
                   );
                 }
               },
