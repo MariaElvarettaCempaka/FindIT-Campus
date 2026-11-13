@@ -549,17 +549,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ),
                               child: Row(
                                 children: [
+                                  // Foto Asli Dompet Kulit Hitam (Thumbnail 48x48)
                                   Container(
                                     width: 48,
                                     height: 48,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFFD9CC), // Peach
+                                      color: const Color(0xFFFFD9CC), // Peach fallback
                                       borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: const Color(0xFF12312E).withValues(alpha: 0.08),
+                                        width: 1.0,
+                                      ),
                                     ),
-                                    child: Center(
-                                      child: CustomPaint(
-                                        size: const Size(26, 26),
-                                        painter: _OnboardingWalletIconPainter(),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Image.asset(
+                                      'assets/images/dompet_hitam_thumb.jpg',
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          Center(
+                                        child: CustomPaint(
+                                          size: const Size(26, 26),
+                                          painter: _OnboardingWalletIconPainter(),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -645,17 +656,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ),
                               child: Row(
                                 children: [
+                                  // Foto Asli Dompet Cokelat (Thumbnail 48x48)
                                   Container(
                                     width: 48,
                                     height: 48,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFBFE9DA), // Mint
+                                      color: const Color(0xFFBFE9DA), // Mint fallback
                                       borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: const Color(0xFF12312E).withValues(alpha: 0.08),
+                                        width: 1.0,
+                                      ),
                                     ),
-                                    child: Center(
-                                      child: CustomPaint(
-                                        size: const Size(26, 26),
-                                        painter: _OnboardingWalletIconPainter(),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Image.asset(
+                                      'assets/images/dompet_cokelat.jpg',
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          Center(
+                                        child: CustomPaint(
+                                          size: const Size(26, 26),
+                                          painter: _OnboardingWalletIconPainter(),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -829,16 +851,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Header Kartu Peach (110px) dengan Ikon Dompet Apple-Style Refined
+                                // Header Kartu Peach (110px) dengan Foto Asli Dompet Kulit Hitam
                                 Container(
                                   height: 110,
                                   width: double.infinity,
                                   color: const Color(0xFFFFD9CC), // Peach header
-                                  child: Center(
-                                    child: CustomPaint(
-                                      size: const Size(54, 54),
-                                      painter: _OnboardingWalletIconPainter(
-                                        strokeWidth: 3.2,
+                                  child: Image.asset(
+                                    'assets/images/dompet_kulit.jpg',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        Center(
+                                      child: CustomPaint(
+                                        size: const Size(54, 54),
+                                        painter: _OnboardingWalletIconPainter(
+                                          strokeWidth: 3.2,
+                                        ),
                                       ),
                                     ),
                                   ),
