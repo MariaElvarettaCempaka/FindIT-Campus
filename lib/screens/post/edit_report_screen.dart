@@ -22,6 +22,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
   late final TextEditingController _namaController;
   late final TextEditingController _deskripsiController;
   late final TextEditingController _lokasiController;
+  late final TextEditingController _lokasiPenyimpananController;
   late final TextEditingController _fotoController;
 
   final ReportService _reportService = ReportService();
@@ -49,11 +50,21 @@ class _EditReportScreenState extends State<EditReportScreen> {
 
     final report = widget.report;
 
-    _namaController = TextEditingController(text: report.namaBarang);
-    _deskripsiController =
-        TextEditingController(text: report.deskripsi);
-    _lokasiController = TextEditingController(text: report.lokasi);
-    _fotoController = TextEditingController(text: report.fotoBarang);
+    _namaController = TextEditingController(
+      text: report.namaBarang,
+    );
+    _deskripsiController = TextEditingController(
+      text: report.deskripsi,
+    );
+    _lokasiController = TextEditingController(
+      text: report.lokasi,
+    );
+    _lokasiPenyimpananController = TextEditingController(
+      text: report.lokasiPenyimpanan ?? '',
+    );
+    _fotoController = TextEditingController(
+      text: report.fotoBarang,
+    );
 
     _jenisLaporan = report.jenisLaporan;
     _kategori = _kategoriList.contains(report.kategori)
@@ -93,9 +104,13 @@ class _EditReportScreenState extends State<EditReportScreen> {
           'kategori': _kategori,
           'deskripsi': _deskripsiController.text.trim(),
           'lokasi': _lokasiController.text.trim(),
+          'lokasiPenyimpanan': _jenisLaporan == 'Ditemukan'
+              ? _lokasiPenyimpananController.text.trim()
+              : null,
           'fotoBarang': _fotoController.text.trim(),
-          'tanggalKejadian':
-              Timestamp.fromDate(_tanggalKejadian),
+          'tanggalKejadian': Timestamp.fromDate(
+            _tanggalKejadian,
+          ),
         },
       );
 
@@ -130,6 +145,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
     _namaController.dispose();
     _deskripsiController.dispose();
     _lokasiController.dispose();
+    _lokasiPenyimpananController.dispose();
     _fotoController.dispose();
     super.dispose();
   }
@@ -253,6 +269,22 @@ class _EditReportScreenState extends State<EditReportScreen> {
                 },
               ),
 
+              if (_jenisLaporan == 'Ditemukan') ...[
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _lokasiPenyimpananController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Lokasi Penyimpanan (Opsional)',
+                    hintText:
+                        'Contoh: Pos satpam, ruang TU, atau sekretariat',
+                    border: OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 16),
 
               TextFormField(
@@ -286,8 +318,9 @@ class _EditReportScreenState extends State<EditReportScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed:
-                      _isLoading ? null : _simpanPerubahan,
+                  onPressed: _isLoading
+                      ? null
+                      : _simpanPerubahan,
                   child: _isLoading
                       ? const CircularProgressIndicator()
                       : const Text('Simpan Perubahan'),

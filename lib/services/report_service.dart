@@ -31,6 +31,7 @@ class ReportService {
       tanggalKejadian: report.tanggalKejadian,
       status: report.status,
       tanggalSelesai: report.tanggalSelesai,
+      lokasiPenyimpanan: report.lokasiPenyimpanan,
     );
 
     final document = await _reports.add(newReport.toMap());

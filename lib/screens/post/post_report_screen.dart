@@ -15,6 +15,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
   final _namaController = TextEditingController();
   final _deskripsiController = TextEditingController();
   final _lokasiController = TextEditingController();
+  final _lokasiPenyimpananController = TextEditingController();
   final _fotoController = TextEditingController();
 
   final ReportService _reportService = ReportService();
@@ -66,6 +67,9 @@ class _PostReportScreenState extends State<PostReportScreen> {
         deskripsi: _deskripsiController.text.trim(),
         fotoBarang: _fotoController.text.trim(),
         lokasi: _lokasiController.text.trim(),
+        lokasiPenyimpanan: _jenisLaporan == 'Ditemukan'
+            ? _lokasiPenyimpananController.text.trim()
+            : null,
         tanggalKejadian: _tanggalKejadian,
       );
 
@@ -102,6 +106,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
     _namaController.dispose();
     _deskripsiController.dispose();
     _lokasiController.dispose();
+    _lokasiPenyimpananController.dispose();
     _fotoController.dispose();
     super.dispose();
   }
@@ -221,6 +226,21 @@ class _PostReportScreenState extends State<PostReportScreen> {
                   return null;
                 },
               ),
+
+              if (_jenisLaporan == 'Ditemukan') ...[
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _lokasiPenyimpananController,
+                  decoration: const InputDecoration(
+                    labelText: 'Lokasi Penyimpanan (Opsional)',
+                    hintText: 'Contoh: Pos satpam, ruang TU, atau sekretariat',
+                    border: OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                  ),
+                  maxLines: 2,
+                ),
+              ],
 
               const SizedBox(height: 16),
 

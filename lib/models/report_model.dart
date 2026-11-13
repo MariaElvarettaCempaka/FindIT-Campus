@@ -9,6 +9,7 @@ class ReportModel {
   final String deskripsi;
   final String fotoBarang;
   final String lokasi;
+  final String? lokasiPenyimpanan;
   final DateTime tanggalKejadian;
   final String status;
   final DateTime? tanggalSelesai;
@@ -22,6 +23,7 @@ class ReportModel {
     required this.deskripsi,
     required this.fotoBarang,
     required this.lokasi,
+    this.lokasiPenyimpanan,
     required this.tanggalKejadian,
     this.status = 'Dalam Proses',
     this.tanggalSelesai,
@@ -36,6 +38,7 @@ class ReportModel {
       'deskripsi': deskripsi,
       'fotoBarang': fotoBarang,
       'lokasi': lokasi,
+      'lokasiPenyimpanan': lokasiPenyimpanan,
       'tanggalKejadian': Timestamp.fromDate(tanggalKejadian),
       'status': status,
       'tanggalSelesai': tanggalSelesai == null
@@ -62,6 +65,7 @@ class ReportModel {
       deskripsi: map['deskripsi'] ?? '',
       fotoBarang: map['fotoBarang'] ?? '',
       lokasi: map['lokasi'] ?? '',
+      lokasiPenyimpanan: map['lokasiPenyimpanan'],
       tanggalKejadian: tanggal is Timestamp
           ? tanggal.toDate()
           : DateTime.now(),

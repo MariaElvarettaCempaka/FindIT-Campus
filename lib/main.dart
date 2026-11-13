@@ -1,24 +1,25 @@
-
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'core/app_theme.dart';
-
 import 'firebase_options.dart';
 import 'models/report_model.dart';
 import 'services/report_service.dart';
 import 'screens/post/post_report_screen.dart';
 import 'screens/post/edit_report_screen.dart';
 
+const Color primaryGreen = Color(0xFF17695D);
+const Color backgroundColor = Color(0xFFFBF8F3);
+const Color mainTextColor = Color(0xFF12312E);
+const Color borderColor = Color(0xFFDEE8E2);
+const Color dangerColor = Color(0xFFE0533C);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const FindITCampusApp());
 }
 
@@ -37,13 +38,13 @@ class FindITCampusApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
-      scrollBehavior:
-          const MaterialScrollBehavior().copyWith(scrollbars: false),
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        scrollbars: false,
+      ),
       home: const LoginPage(),
     );
   }
 }
-
 
 // ================= LOGIN PAGE =================
 
@@ -65,9 +66,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _login() async {
     if (_emailController.text.trim().isEmpty ||
         _passwordController.text.isEmpty) {
-      setState(() {
-        _errorMessage = 'Email dan password wajib diisi.';
-      });
+      setState(() => _errorMessage = 'Email dan password wajib diisi.');
       return;
     }
 
@@ -77,18 +76,15 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final credential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
       final user = credential.user!;
-
       final userRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid);
-
       final userSnapshot = await userRef.get();
 
       if (!userSnapshot.exists) {
@@ -100,37 +96,22 @@ class _LoginPageState extends State<LoginPage> {
           'createdAt': FieldValue.serverTimestamp(),
         });
       } else {
-        await userRef.update({
-          'email': user.email ?? '',
-        });
+        await userRef.update({'email': user.email ?? ''});
       }
 
       if (!mounted) return;
-
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const MainNavigationPage(),
-        ),
+        MaterialPageRoute(builder: (_) => const MainNavigationPage()),
       );
     } on FirebaseAuthException catch (e) {
-      setState(() {
-        _errorMessage = e.message ?? 'Login gagal.';
-      });
+      setState(() => _errorMessage = e.message ?? 'Login gagal.');
     } on FirebaseException catch (e) {
-      setState(() {
-        _errorMessage = 'Gagal mengakses Firestore: ${e.message}';
-      });
+      setState(() => _errorMessage = 'Gagal mengakses Firestore: ${e.message}');
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Terjadi kesalahan: $e';
-      });
+      setState(() => _errorMessage = 'Terjadi kesalahan: $e');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -161,10 +142,7 @@ class _LoginPageState extends State<LoginPage> {
                 const Text(
                   'FindIT Campus',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -203,11 +181,8 @@ class _LoginPageState extends State<LoginPage> {
                             ? Icons.visibility_off
                             : Icons.visibility,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                 ),
@@ -215,14 +190,12 @@ class _LoginPageState extends State<LoginPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ForgotPasswordPage(),
-                        ),
-                      );
-                    },
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordPage(),
+                      ),
+                    ),
                     child: const Text(
                       'Lupa password?',
                       style: TextStyle(
@@ -232,7 +205,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
                 if (_errorMessage != null) ...[
                   Text(
                     _errorMessage!,
@@ -295,8 +267,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-
       if (!mounted) return;
+
       setState(() => _emailSent = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -328,14 +300,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           message = e.message ?? 'Gagal mengirim tautan reset password.';
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Terjadi kesalahan: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Terjadi kesalahan: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -350,7 +320,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF8F3),
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -362,26 +332,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Material(
-                      color: Colors.white,
-                      shape: const CircleBorder(),
-                      child: IconButton(
-                        tooltip: 'Kembali',
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back),
-                      ),
+                    child: IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back),
                     ),
                   ),
                   const SizedBox(height: 36),
-                  Center(
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFBDEBDD),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
+                  const Center(
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Color(0xFFBDEBDD),
+                      child: Icon(
                         Icons.mail_outline_rounded,
                         size: 55,
                         color: Color(0xFF173C38),
@@ -401,10 +362,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   const Text(
                     'Masukkan email yang kamu pakai saat mendaftar. '
                     'Kami akan mengirimkan tautan untuk mengatur ulang password.',
-                    style: TextStyle(
-                      color: Colors.black54,
-                      height: 1.5,
-                    ),
+                    style: TextStyle(color: Colors.black54, height: 1.5),
                   ),
                   const SizedBox(height: 28),
                   const Text(
@@ -416,7 +374,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.done,
-                    autocorrect: false,
                     decoration: const InputDecoration(
                       hintText: 'nama@email.com',
                       prefixIcon: Icon(Icons.email_outlined),
@@ -430,26 +387,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     height: 52,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _sendResetEmail,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF218477),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
                       child: _isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
                             )
-                          : const Text(
-                              'Kirim tautan reset',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
+                          : const Text('Kirim tautan reset'),
                     ),
                   ),
                   if (_emailSent) ...[
@@ -460,57 +403,22 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         color: const Color(0xFFDDF3E9),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.check_circle, color: Color(0xFF218477)),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Permintaan reset password sudah diproses. '
-                              'Periksa email dan folder Spam.',
-                              style: TextStyle(color: Color(0xFF173C38)),
-                            ),
-                          ),
-                        ],
+                      child: const Text(
+                        'Permintaan reset password sudah diproses. '
+                        'Periksa email dan folder Spam.',
                       ),
                     ),
                   ],
                   const SizedBox(height: 18),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.info_outline, color: Color(0xFF218477)),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Belum ada emailnya? Cek folder spam, '
-                            'atau coba kirim ulang setelah beberapa saat.',
-                            style: TextStyle(
-                              color: Color(0xFF173C38),
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  const Text(
+                    'Belum ada emailnya? Cek folder spam, atau coba kirim '
+                    'ulang setelah beberapa saat.',
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 28),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Kembali ke halaman masuk',
-                      style: TextStyle(
-                        color: Color(0xFF218477),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: const Text('Kembali ke halaman masuk'),
                   ),
                 ],
               ),
@@ -528,13 +436,11 @@ class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});
 
   @override
-  State<MainNavigationPage> createState() =>
-      _MainNavigationPageState();
+  State<MainNavigationPage> createState() => _MainNavigationPageState();
 }
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _selectedIndex = 0;
-
   final ReportService _reportService = ReportService();
 
   final List<String> _titles = [
@@ -547,22 +453,17 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   Future<void> _openPostReport() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const PostReportScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const PostReportScreen()),
     );
   }
 
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
-
     if (!mounted) return;
 
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (_) => const LoginPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const LoginPage()),
       (route) => false,
     );
   }
@@ -576,10 +477,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       case 2:
         return const NotificationContent();
       case 3:
-        return ProfileContent(
-          onLogout: _logout,
-          reportService: _reportService,
-        );
+        return ProfileContent(onLogout: _logout, reportService: _reportService);
       default:
         return HomeContent(reportService: _reportService);
     }
@@ -598,42 +496,31 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             IconButton(
               tooltip: 'Notifikasi',
               icon: const Icon(Icons.notifications_none),
-              onPressed: () {
-                setState(() {
-                  _selectedIndex = 2;
-                });
-              },
+              onPressed: () => setState(() => _selectedIndex = 2),
             ),
         ],
       ),
       body: _buildPage(),
-      floatingActionButton:
-          _selectedIndex == 0 || _selectedIndex == 1
-              ? FloatingActionButton.extended(
-                  onPressed: _openPostReport,
-                  backgroundColor: const Color(0xFF218477),
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Buat Laporan'),
-                )
-              : null,
+      floatingActionButton: _selectedIndex == 0 || _selectedIndex == 1
+          ? FloatingActionButton.extended(
+              onPressed: _openPostReport,
+              backgroundColor: const Color(0xFF218477),
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add),
+              label: const Text('Buat Laporan'),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onDestinationSelected: (index) =>
+            setState(() => _selectedIndex = index),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Home',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.search),
-            label: 'Katalog',
-          ),
+          NavigationDestination(icon: Icon(Icons.search), label: 'Katalog'),
           NavigationDestination(
             icon: Icon(Icons.notifications_outlined),
             selectedIcon: Icon(Icons.notifications),
@@ -655,10 +542,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 class HomeContent extends StatelessWidget {
   final ReportService reportService;
 
-  const HomeContent({
-    super.key,
-    required this.reportService,
-  });
+  const HomeContent({super.key, required this.reportService});
 
   @override
   Widget build(BuildContext context) {
@@ -683,10 +567,7 @@ class HomeContent extends StatelessWidget {
           const SizedBox(height: 24),
           const Text(
             'Laporan Terbaru',
-            style: TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           ReportList(reportService: reportService),
@@ -701,19 +582,14 @@ class HomeContent extends StatelessWidget {
 class CatalogContent extends StatefulWidget {
   final ReportService reportService;
 
-  const CatalogContent({
-    super.key,
-    required this.reportService,
-  });
+  const CatalogContent({super.key, required this.reportService});
 
   @override
   State<CatalogContent> createState() => _CatalogContentState();
 }
 
 class _CatalogContentState extends State<CatalogContent> {
-  final TextEditingController _searchController =
-      TextEditingController();
-
+  final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'Semua';
 
   final List<String> _categories = [
@@ -753,9 +629,7 @@ class _CatalogContentState extends State<CatalogContent> {
                 },
               ),
             ),
-            onChanged: (_) {
-              setState(() {});
-            },
+            onChanged: (_) => setState(() {}),
           ),
         ),
         SizedBox(
@@ -766,18 +640,13 @@ class _CatalogContentState extends State<CatalogContent> {
             itemCount: _categories.length,
             itemBuilder: (context, index) {
               final category = _categories[index];
-              final selected = category == _selectedCategory;
-
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: ChoiceChip(
                   label: Text(category),
-                  selected: selected,
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedCategory = category;
-                    });
-                  },
+                  selected: category == _selectedCategory,
+                  onSelected: (_) =>
+                      setState(() => _selectedCategory = category),
                 ),
               );
             },
@@ -793,25 +662,18 @@ class _CatalogContentState extends State<CatalogContent> {
                   child: Text('Gagal memuat katalog barang.'),
                 );
               }
-
-              if (snapshot.connectionState ==
-                  ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
               }
 
-              final search =
-                  _searchController.text.toLowerCase();
-
+              final search = _searchController.text.toLowerCase();
               final reports = (snapshot.data ?? []).where((report) {
-                final matchesName =
-                    report.namaBarang.toLowerCase().contains(search);
-
+                final matchesName = report.namaBarang.toLowerCase().contains(
+                  search,
+                );
                 final matchesCategory =
                     _selectedCategory == 'Semua' ||
-                        report.kategori == _selectedCategory;
-
+                    report.kategori == _selectedCategory;
                 return matchesName && matchesCategory;
               }).toList();
 
@@ -824,9 +686,8 @@ class _CatalogContentState extends State<CatalogContent> {
               return ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
                 itemCount: reports.length,
-                itemBuilder: (context, index) {
-                  return ReportCard(report: reports[index]);
-                },
+                itemBuilder: (context, index) =>
+                    ReportCard(report: reports[index]),
               );
             },
           ),
@@ -841,10 +702,7 @@ class _CatalogContentState extends State<CatalogContent> {
 class ReportList extends StatelessWidget {
   final ReportService reportService;
 
-  const ReportList({
-    super.key,
-    required this.reportService,
-  });
+  const ReportList({super.key, required this.reportService});
 
   @override
   Widget build(BuildContext context) {
@@ -854,15 +712,11 @@ class ReportList extends StatelessWidget {
         if (snapshot.hasError) {
           return const Text('Gagal memuat laporan.');
         }
-
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
 
         final reports = snapshot.data ?? [];
-
         if (reports.isEmpty) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 35),
@@ -876,9 +730,10 @@ class ReportList extends StatelessWidget {
         }
 
         return Column(
-          children: reports.take(10).map((report) {
-            return ReportCard(report: report);
-          }).toList(),
+          children: reports
+              .take(10)
+              .map((report) => ReportCard(report: report))
+              .toList(),
         );
       },
     );
@@ -910,11 +765,11 @@ class ReportImage extends StatelessWidget {
     return Container(
       width: width,
       height: height,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: const Color(0xFF218477).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
-      clipBehavior: Clip.antiAlias,
       child: hasImage
           ? Image.network(
               imageUrl,
@@ -923,20 +778,15 @@ class ReportImage extends StatelessWidget {
               fit: fit,
               loadingBuilder: (context, child, progress) {
                 if (progress == null) return child;
-
                 return const Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                  ),
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 );
               },
-              errorBuilder: (context, error, stackTrace) {
-                return Icon(
-                  Icons.broken_image_outlined,
-                  color: const Color(0xFF218477),
-                  size: iconSize,
-                );
-              },
+              errorBuilder: (context, error, stackTrace) => Icon(
+                Icons.broken_image_outlined,
+                color: const Color(0xFF218477),
+                size: iconSize,
+              ),
             )
           : Icon(
               Icons.inventory_2_outlined,
@@ -952,10 +802,7 @@ class ReportImage extends StatelessWidget {
 class ReportCard extends StatelessWidget {
   final ReportModel report;
 
-  const ReportCard({
-    super.key,
-    required this.report,
-  });
+  const ReportCard({super.key, required this.report});
 
   @override
   Widget build(BuildContext context) {
@@ -965,21 +812,13 @@ class ReportCard extends StatelessWidget {
       color: Colors.white,
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ReportDetailScreen(
-                report: report,
-              ),
-            ),
-          );
-        },
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ReportDetailScreen(report: report)),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -990,7 +829,6 @@ class ReportCard extends StatelessWidget {
                 width: 75,
                 height: 75,
                 iconSize: 32,
-                fit: BoxFit.cover,
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1009,9 +847,7 @@ class ReportCard extends StatelessWidget {
                       report.deskripsi,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.black54,
-                      ),
+                      style: const TextStyle(color: Colors.black54),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -1027,9 +863,7 @@ class ReportCard extends StatelessWidget {
                           color: isLost
                               ? const Color(0xFFFFE1D9)
                               : const Color(0xFFD5F2E8),
-                          textColor: isLost
-                              ? Colors.deepOrange
-                              : Colors.teal,
+                          textColor: isLost ? Colors.deepOrange : Colors.teal,
                         ),
                         _ReportBadge(
                           label: report.status,
@@ -1045,10 +879,7 @@ class ReportCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right,
-                color: Colors.grey,
-              ),
+              const Icon(Icons.chevron_right, color: Colors.grey),
             ],
           ),
         ),
@@ -1062,14 +893,10 @@ class ReportCard extends StatelessWidget {
 class ReportDetailScreen extends StatefulWidget {
   final ReportModel report;
 
-  const ReportDetailScreen({
-    super.key,
-    required this.report,
-  });
+  const ReportDetailScreen({super.key, required this.report});
 
   @override
-  State<ReportDetailScreen> createState() =>
-      _ReportDetailScreenState();
+  State<ReportDetailScreen> createState() => _ReportDetailScreenState();
 }
 
 class _ReportDetailScreenState extends State<ReportDetailScreen> {
@@ -1085,29 +912,98 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   String _formatDate(DateTime? date) {
     if (date == null) return '-';
-
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
-    final year = date.year.toString();
-
-    return '$day/$month/$year';
+    return '$day/$month/${date.year}';
   }
 
-  Widget _detailItem(
-    String label,
-    String value,
-    IconData icon,
-  ) {
+  String _relativeTime(dynamic timestamp) {
+    if (timestamp is! Timestamp) return 'Waktu publikasi tidak tersedia';
+
+    final difference = DateTime.now().difference(timestamp.toDate());
+    if (difference.isNegative || difference.inMinutes < 1) {
+      return 'Diposting baru saja';
+    }
+    if (difference.inMinutes < 60) {
+      return 'Diposting ${difference.inMinutes} menit lalu';
+    }
+    if (difference.inHours < 24) {
+      return 'Diposting ${difference.inHours} jam lalu';
+    }
+    if (difference.inDays < 7) {
+      return 'Diposting ${difference.inDays} hari lalu';
+    }
+    if (difference.inDays < 30) {
+      return 'Diposting ${difference.inDays ~/ 7} minggu lalu';
+    }
+    if (difference.inDays < 365) {
+      return 'Diposting ${difference.inDays ~/ 30} bulan lalu';
+    }
+    return 'Diposting ${difference.inDays ~/ 365} tahun lalu';
+  }
+
+  String _activeDays(dynamic timestamp) {
+    if (timestamp is! Timestamp) return 'Belum tersedia';
+    final days = DateTime.now().difference(timestamp.toDate()).inDays;
+    return '${days + 1} hari';
+  }
+
+  String _normalizePhone(String phone) {
+    var number = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (number.startsWith('0')) {
+      number = '62${number.substring(1)}';
+    } else if (number.startsWith('8')) {
+      number = '62$number';
+    }
+    return number;
+  }
+
+  void _openImage(String imageUrl) {
+    if (imageUrl.trim().isEmpty) return;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black,
+      builder: (context) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 5,
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.broken_image_outlined,
+                    color: Colors.white,
+                    size: 60,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 35,
+              right: 16,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailItem(String label, String value, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: const Color(0xFF218477),
-            size: 22,
-          ),
+          Icon(icon, color: primaryGreen, size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1115,10 +1011,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: Colors.black54, fontSize: 13),
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -1136,69 +1029,180 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     );
   }
 
-  // ================= EDIT LAPORAN =================
+  Widget _sectionCard({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: borderColor),
+      ),
+      child: child,
+    );
+  }
 
-  Future<void> _editReport(ReportModel report) async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EditReportScreen(
-          report: report,
+  Future<void> _contactReporter(String phone, String reporterName) async {
+    final number = _normalizePhone(phone);
+
+    if (number.isEmpty || number.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Nomor WhatsApp pelapor belum tersedia atau tidak valid.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 22),
+              const Text(
+                'Hubungi Pelapor',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Kamu akan diarahkan ke WhatsApp untuk menghubungi '
+                '${reporterName.isEmpty ? 'pelapor' : reporterName}.',
+                style: const TextStyle(color: Colors.black54, height: 1.5),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F7F4),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.phone_outlined, color: primaryGreen),
+                    const SizedBox(width: 10),
+                    Text(
+                      phone,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(sheetContext, true),
+                  icon: const Icon(Icons.chat),
+                  label: const Text('Lanjut ke WhatsApp'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(sheetContext, false),
+                  child: const Text('Batal'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
 
-    if (!mounted) return;
+    if (confirmed != true || !mounted) return;
 
-    if (result == true) {
-      Navigator.pop(context, true);
+    final uri = Uri.parse('https://wa.me/$number');
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('WhatsApp tidak dapat dibuka.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Gagal membuka WhatsApp: $e')));
     }
   }
 
-  // ================= HAPUS LAPORAN =================
+  Future<void> _editReport(ReportModel report) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => EditReportScreen(report: report)),
+    );
+
+    if (!mounted) return;
+    if (result == true) Navigator.pop(context, true);
+  }
 
   Future<void> _deleteReport(ReportModel report) async {
     final confirmation = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Hapus Laporan?'),
-          content: Text(
-            'Apakah kamu yakin ingin menghapus laporan '
-            '"${report.namaBarang}"?\n\n'
-            'Laporan yang dihapus tidak dapat dikembalikan.',
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hapus Laporan?'),
+        content: Text(
+          'Apakah kamu yakin ingin menghapus laporan '
+          '"${report.namaBarang}"?\n\n'
+          'Laporan yang dihapus tidak dapat dikembalikan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
-              child: const Text('Batal'),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-              },
-              child: const Text('Ya, Hapus'),
-            ),
-          ],
-        );
-      },
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Ya, Hapus'),
+          ),
+        ],
+      ),
     );
 
     if (confirmation != true || !mounted) return;
-
-    setState(() {
-      _isDeleting = true;
-    });
+    setState(() => _isDeleting = true);
 
     try {
       await _reportService.deleteReport(report.id);
-
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1207,11 +1211,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           backgroundColor: Colors.green,
         ),
       );
-
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal menghapus laporan: $e'),
@@ -1219,69 +1221,96 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isDeleting = false;
-        });
-      }
+      if (mounted) setState(() => _isDeleting = false);
     }
   }
-
-  // ================= TANDAI SELESAI =================
 
   Future<void> _markAsCompleted(ReportModel report) async {
     final confirmation = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Tandai Laporan Selesai?'),
-          content: Text(
-            'Apakah laporan "${report.namaBarang}" '
-            'sudah selesai ditangani dan barang sudah '
-            'dikembalikan kepada pemilik?',
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text(
+          'Tandai Laporan Selesai?',
+          style: TextStyle(
+            fontSize: 21,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF173C38),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
-              child: const Text('Batal'),
+        ),
+        content: Text(
+          'Apakah laporan "${report.namaBarang}" sudah selesai ditangani '
+          'dan barang sudah dikembalikan kepada pemilik?',
+          style: const TextStyle(
+            fontSize: 14,
+            height: 1.5,
+            color: Color(0xFF52615E),
+          ),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF218477),
+                      side: const BorderSide(color: Color(0xFF218477)),
+                      minimumSize: const Size(0, 46),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Batal',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryGreen,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 46),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Ya, Selesai',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF218477),
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-              },
-              child: const Text('Ya, Selesai'),
-            ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
 
     if (confirmation != true || !mounted) return;
-
-    setState(() {
-      _isCompleting = true;
-    });
+    setState(() => _isCompleting = true);
 
     try {
       await _reportService.markReportAsCompleted(report.id);
-
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Laporan berhasil ditandai selesai.'),
-          backgroundColor: Color(0xFF218477),
+          backgroundColor: primaryGreen,
         ),
       );
     } catch (e) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal menandai laporan selesai: $e'),
@@ -1289,20 +1318,178 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isCompleting = false;
-        });
-      }
+      if (mounted) setState(() => _isCompleting = false);
     }
   }
 
-  // ================= DETAIL BUILD =================
+  Widget _reporterCard() {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.report.userId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() ?? {};
+        final name = data['nama']?.toString().trim() ?? '';
+        final photo = data['fotoProfil']?.toString() ?? '';
+        final phone = data['nomorWhatsApp']?.toString() ?? '';
+        final displayName = name.isEmpty ? 'Pengguna FindIT' : name;
+
+        return _sectionCard(
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 26,
+                backgroundColor: const Color(0xFFD5F2E8),
+                backgroundImage: photo.trim().isNotEmpty
+                    ? NetworkImage(photo)
+                    : null,
+                child: photo.trim().isEmpty
+                    ? const Icon(Icons.person, color: primaryGreen, size: 28)
+                    : null,
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Dilaporkan oleh',
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      displayName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (snapshot.connectionState == ConnectionState.waiting)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              if (phone.trim().isEmpty &&
+                  snapshot.connectionState != ConnectionState.waiting &&
+                  !_isOwner)
+                const Icon(Icons.info_outline, color: Colors.grey),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _safetyGuideline() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF2DF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFF2D5A9)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.shield_outlined, color: Color(0xFFB66B20), size: 24),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Panduan Keamanan',
+                  style: TextStyle(
+                    color: Color(0xFF8B5118),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Lakukan serah terima di area ber-CCTV '
+                  '(Pos Satpam/Lobby). Hindari transfer uang tebusan '
+                  'secara daring.',
+                  style: TextStyle(color: Color(0xFF79552D), height: 1.45),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ownerInsights(dynamic createdAt) {
+    return _sectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Informasi Laporan',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _insightItem(
+                'Dilihat',
+                'Belum tersedia',
+                Icons.visibility_outlined,
+              ),
+              _insightItem(
+                'Respons',
+                'Belum tersedia',
+                Icons.chat_bubble_outline,
+              ),
+              _insightItem(
+                'Aktif',
+                _activeDays(createdAt),
+                Icons.calendar_today_outlined,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Data jumlah kunjungan dan respons belum tersedia pada sistem.',
+            style: TextStyle(fontSize: 11, color: Colors.black54),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _insightItem(String label, String value, IconData icon) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, color: primaryGreen, size: 21),
+          const SizedBox(height: 7),
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, color: Colors.black54),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF8F3),
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text(
           'Detail Laporan',
@@ -1316,18 +1503,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(
-              child: Text('Gagal memuat detail laporan.'),
-            );
+            return const Center(child: Text('Gagal memuat detail laporan.'));
           }
-
           if (snapshot.connectionState == ConnectionState.waiting &&
               !snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
-
           if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(
               child: Text('Laporan tidak ditemukan atau telah dihapus.'),
@@ -1335,178 +1516,242 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           }
 
           final data = snapshot.data!.data();
-
           if (data == null) {
-            return const Center(
-              child: Text('Data laporan tidak tersedia.'),
-            );
+            return const Center(child: Text('Data laporan tidak tersedia.'));
           }
 
-          final report = ReportModel.fromMap(
-            snapshot.data!.id,
-            data,
-          );
-
+          final report = ReportModel.fromMap(snapshot.data!.id, data);
           final isLost = report.jenisLaporan == 'Hilang';
           final isCompleted = report.status == 'Selesai';
+          final createdAt = data['createdAt'];
+          final custodyLocation = report.lokasiPenyimpanan?.trim() ?? '';
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Card(
-                  color: Colors.white,
-                  elevation: 1,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                // Foto utama dengan badge status.
+                GestureDetector(
+                  onTap: () => _openImage(report.fotoBarang),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: Container(
+                          width: double.infinity,
+                          height: 250,
+                          color: const Color(0xFFE8EFEB),
+                          child: report.fotoBarang.trim().isEmpty
+                              ? const Icon(
+                                  Icons.inventory_2_outlined,
+                                  size: 75,
+                                  color: primaryGreen,
+                                )
+                              : Image.network(
+                                  report.fotoBarang,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Center(
+                                    child: Icon(
+                                      Icons.broken_image_outlined,
+                                      size: 65,
+                                      color: primaryGreen,
+                                    ),
+                                  ),
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return const Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 14,
+                        top: 14,
+                        child: _ReportBadge(
+                          label: report.status,
+                          color: isCompleted
+                              ? const Color(0xFFD5F2E8)
+                              : const Color(0xFFFFF0D9),
+                          textColor: isCompleted
+                              ? primaryGreen
+                              : const Color(0xFF94601F),
+                        ),
+                      ),
+                      Positioned(
+                        right: 14,
+                        bottom: 14,
+                        child: Container(
+                          padding: const EdgeInsets.all(9),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.55),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: const Icon(
+                            Icons.zoom_in,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
+                ),
+                const SizedBox(height: 20),
+
+                Text(
+                  report.namaBarang,
+                  style: const TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.bold,
+                    color: mainTextColor,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _ReportBadge(
+                      label: report.jenisLaporan,
+                      color: isLost
+                          ? const Color(0xFFFFE1D9)
+                          : const Color(0xFFD5F2E8),
+                      textColor: isLost ? dangerColor : primaryGreen,
+                    ),
+                    _ReportBadge(
+                      label: report.kategori,
+                      color: const Color(0xFFEAF0ED),
+                      textColor: mainTextColor,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time,
+                      size: 15,
+                      color: Colors.black45,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _relativeTime(createdAt),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _formatDate(report.tanggalKejadian),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Kartu profil pelapor.
+                _reporterCard(),
+                const SizedBox(height: 16),
+
+                // Informasi selesai.
+                if (isCompleted) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDDF3E9),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFF9BD9C1)),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Center(
-                          child: ReportImage(
-                            imageUrl: report.fotoBarang,
-                            width: double.infinity,
-                            height: 230,
-                            iconSize: 75,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Center(
-                          child: Text(
-                            report.namaBarang,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 23,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF173C38),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Center(
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            alignment: WrapAlignment.center,
-                            children: [
-                              _ReportBadge(
-                                label: report.jenisLaporan,
-                                color: isLost
-                                    ? const Color(0xFFFFE1D9)
-                                    : const Color(0xFFD5F2E8),
-                                textColor: isLost
-                                    ? Colors.deepOrange
-                                    : Colors.teal,
-                              ),
-                              _ReportBadge(
-                                label: report.status,
-                                color: isCompleted
-                                    ? const Color(0xFFD5F2E8)
-                                    : const Color(0xFFECEAE3),
-                                textColor: isCompleted
-                                    ? const Color(0xFF218477)
-                                    : Colors.black87,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Informasi ketika laporan sudah selesai.
-                        if (isCompleted) ...[
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDDF3E9),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: const Color(0xFF9BD9C1),
+                        const Row(
+                          children: [
+                            Icon(Icons.check_circle, color: primaryGreen),
+                            SizedBox(width: 8),
+                            Text(
+                              'Laporan Selesai',
+                              style: TextStyle(
+                                color: primaryGreen,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
                               ),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Row(
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle,
-                                      color: Color(0xFF218477),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Laporan Selesai',
-                                        style: TextStyle(
-                                          color: Color(0xFF176B5D),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Barang telah dikembalikan kepada pemilik.',
-                                  style: TextStyle(
-                                    color: Color(0xFF176B5D),
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Tanggal selesai: '
-                                  '${_formatDate(report.tanggalSelesai)}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF176B5D),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Barang telah dikembalikan kepada pemilik.',
+                          style: TextStyle(color: primaryGreen, height: 1.4),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tanggal selesai: ${_formatDate(report.tanggalSelesai)}',
+                          style: const TextStyle(
+                            color: primaryGreen,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(height: 20),
-                        ],
-
-                        const Divider(),
-                        const SizedBox(height: 16),
-                        _detailItem(
-                          'Kategori',
-                          report.kategori,
-                          Icons.category_outlined,
-                        ),
-                        _detailItem(
-                          'Jenis Laporan',
-                          report.jenisLaporan,
-                          Icons.assignment_outlined,
-                        ),
-                        _detailItem(
-                          'Lokasi',
-                          report.lokasi,
-                          Icons.location_on_outlined,
-                        ),
-                        _detailItem(
-                          'Deskripsi',
-                          report.deskripsi,
-                          Icons.description_outlined,
                         ),
                       ],
                     ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                ],
 
+                // Informasi utama.
+                _sectionCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Informasi Barang',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _detailItem(
+                        'Lokasi Kejadian',
+                        report.lokasi,
+                        Icons.location_on_outlined,
+                      ),
+                      if (!isLost)
+                        _detailItem(
+                          'Lokasi Penyimpanan',
+                          custodyLocation.isEmpty
+                              ? 'Belum ada informasi lokasi penyimpanan'
+                              : custodyLocation,
+                          Icons.place_outlined,
+                        ),
+                      _detailItem(
+                        'Deskripsi',
+                        report.deskripsi,
+                        Icons.description_outlined,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                _safetyGuideline(),
+                const SizedBox(height: 16),
+
+                _ownerInsights(createdAt),
                 const SizedBox(height: 20),
 
                 // Tombol pemilik laporan.
                 if (_isOwner) ...[
-                  // Tombol Tandai Selesai hanya muncul jika belum selesai.
                   if (!isCompleted) ...[
                     SizedBox(
                       width: double.infinity,
@@ -1526,20 +1771,19 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                               )
                             : const Icon(Icons.check_circle_outline),
                         label: Text(
-                          _isCompleting
-                              ? 'Memproses...'
-                              : 'Tandai Selesai',
+                          _isCompleting ? 'Memproses...' : 'Tandai Selesai',
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF218477),
+                          backgroundColor: primaryGreen,
                           foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 12),
                   ],
-
-                  // Edit tetap tersedia meskipun status sudah Selesai.
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -1550,14 +1794,15 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                       icon: const Icon(Icons.edit_outlined),
                       label: const Text('Edit Laporan'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF218477),
+                        backgroundColor: primaryGreen,
                         foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // Hapus tetap tersedia meskipun status sudah Selesai.
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -1569,34 +1814,37 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.delete_outline),
                       label: Text(
                         _isDeleting ? 'Menghapus...' : 'Hapus Laporan',
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                        foregroundColor: dangerColor,
+                        side: const BorderSide(color: dangerColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                 ],
 
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
+                  height: 48,
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
+                    onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.arrow_back),
                     label: const Text('Kembali'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF218477),
+                      foregroundColor: primaryGreen,
+                      side: const BorderSide(color: borderColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                   ),
                 ),
@@ -1605,6 +1853,84 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           );
         },
       ),
+      bottomNavigationBar: _isOwner
+          ? null
+          : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(widget.report.userId)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Gagal membaca data pelapor: ${snapshot.error}',
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Dokumen pengguna tidak ditemukan.'),
+                  );
+                }
+
+                final userData = snapshot.data!.data() ?? {};
+                final phone = userData['nomorWhatsApp']?.toString() ?? '';
+
+                debugPrint('ID pelapor: ${widget.report.userId}');
+                debugPrint('Data nomor WhatsApp: $phone');
+
+                final validPhone = _normalizePhone(phone).length >= 10;
+
+                return SafeArea(
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(top: BorderSide(color: borderColor)),
+                    ),
+                    child: SizedBox(
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: validPhone
+                            ? () => _contactReporter(
+                                phone,
+                                snapshot.data?.data()?['nama']?.toString() ??
+                                    '',
+                              )
+                            : null,
+                        icon: const Icon(Icons.chat),
+                        label: Text(
+                          validPhone
+                              ? 'Hubungi via WhatsApp'
+                              : 'Nomor WhatsApp belum tersedia',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          disabledBackgroundColor: Colors.grey.shade300,
+                          foregroundColor: Colors.white,
+                          disabledForegroundColor: Colors.black54,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
@@ -1625,10 +1951,7 @@ class _ReportBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 5,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(20),
@@ -1651,35 +1974,22 @@ class NotificationContent extends StatelessWidget {
   const NotificationContent({super.key});
 
   String _formatDate(dynamic timestamp) {
-    if (timestamp is! Timestamp) {
-      return 'Baru saja';
-    }
-
+    if (timestamp is! Timestamp) return 'Baru saja';
     final date = timestamp.toDate();
-
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
-    final year = date.year;
-
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
-
-    return '$day/$month/$year • $hour:$minute';
+    return '$day/$month/${date.year} • $hour:$minute';
   }
 
-  Future<void> _openNotification(
-    BuildContext context,
-    String reportId,
-  ) async {
+  Future<void> _openNotification(BuildContext context, String reportId) async {
     try {
       await ReportService().markNotificationAsRead(reportId);
     } catch (e) {
       if (!context.mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal memperbarui notifikasi: $e'),
-        ),
+        SnackBar(content: Text('Gagal memperbarui notifikasi: $e')),
       );
     }
   }
@@ -1687,17 +1997,12 @@ class NotificationContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
-      return const Center(
-        child: Text('Silakan login kembali.'),
-      );
+      return const Center(child: Text('Silakan login kembali.'));
     }
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('reports')
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('reports').snapshots(),
       builder: (context, reportSnapshot) {
         if (reportSnapshot.hasError) {
           return Center(
@@ -1710,30 +2015,16 @@ class NotificationContent extends StatelessWidget {
             ),
           );
         }
-
-        if (reportSnapshot.connectionState ==
-            ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+        if (reportSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
         }
 
-        final reports = [
-          ...(reportSnapshot.data?.docs ?? []),
-        ];
-
+        final reports = [...(reportSnapshot.data?.docs ?? [])];
         reports.sort((a, b) {
           final dateA = a.data()['createdAt'];
           final dateB = b.data()['createdAt'];
-
-          final timeA = dateA is Timestamp
-              ? dateA.millisecondsSinceEpoch
-              : 0;
-
-          final timeB = dateB is Timestamp
-              ? dateB.millisecondsSinceEpoch
-              : 0;
-
+          final timeA = dateA is Timestamp ? dateA.millisecondsSinceEpoch : 0;
+          final timeB = dateB is Timestamp ? dateB.millisecondsSinceEpoch : 0;
           return timeB.compareTo(timeA);
         });
 
@@ -1742,11 +2033,7 @@ class NotificationContent extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.notifications_none,
-                  size: 65,
-                  color: Colors.grey,
-                ),
+                Icon(Icons.notifications_none, size: 65, color: Colors.grey),
                 SizedBox(height: 12),
                 Text('Belum ada notifikasi.'),
               ],
@@ -1754,8 +2041,7 @@ class NotificationContent extends StatelessWidget {
           );
         }
 
-        return StreamBuilder<
-            QuerySnapshot<Map<String, dynamic>>>(
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: ReportService().getNotificationReads(),
           builder: (context, readSnapshot) {
             if (readSnapshot.hasError) {
@@ -1766,27 +2052,16 @@ class NotificationContent extends StatelessWidget {
                 ),
               );
             }
-
-            if (readSnapshot.connectionState ==
-                ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
+            if (readSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
             }
 
             final readReports = <String>{};
-
-            for (final readDoc
-                in readSnapshot.data?.docs ?? []) {
+            for (final readDoc in readSnapshot.data?.docs ?? []) {
               final readData = readDoc.data();
-
               if (readData['isRead'] == true) {
-                final reportId =
-                    readData['reportId']?.toString();
-
-                if (reportId != null) {
-                  readReports.add(reportId);
-                }
+                final reportId = readData['reportId']?.toString();
+                if (reportId != null) readReports.add(reportId);
               }
             }
 
@@ -1796,52 +2071,26 @@ class NotificationContent extends StatelessWidget {
               itemBuilder: (context, index) {
                 final report = reports[index];
                 final data = report.data();
-
                 final reportId = report.id;
-                final jenis =
-                    data['jenisLaporan']?.toString() ??
-                    'Laporan';
-
-                final namaBarang =
-                    data['namaBarang']?.toString() ??
-                    'Barang';
-
-                final lokasi =
-                    data['lokasi']?.toString() ?? '';
-
-                final isHilang =
-                    jenis.toLowerCase() == 'hilang';
-
-                final isRead =
-                    readReports.contains(reportId);
-
+                final jenis = data['jenisLaporan']?.toString() ?? 'Laporan';
+                final namaBarang = data['namaBarang']?.toString() ?? 'Barang';
+                final lokasi = data['lokasi']?.toString() ?? '';
+                final isHilang = jenis.toLowerCase() == 'hilang';
+                final isRead = readReports.contains(reportId);
                 final judul = isHilang
                     ? 'Laporan Barang Hilang Baru'
                     : 'Laporan Barang Ditemukan Baru';
-
                 final pesan = isHilang
-                    ? 'Ada laporan barang hilang: '
-                        '$namaBarang di $lokasi.'
-                    : 'Ada laporan barang ditemukan: '
-                        '$namaBarang di $lokasi.';
+                    ? 'Ada laporan barang hilang: $namaBarang di $lokasi.'
+                    : 'Ada laporan barang ditemukan: $namaBarang di $lokasi.';
 
                 return Card(
-                  color: isRead
-                      ? Colors.white
-                      : const Color(0xFFE6F4F0),
-                  margin: const EdgeInsets.only(
-                    bottom: 12,
-                  ),
+                  color: isRead ? Colors.white : const Color(0xFFE6F4F0),
+                  margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
-                    onTap: () {
-                      _openNotification(
-                        context,
-                        reportId,
-                      );
-                    },
+                    onTap: () => _openNotification(context, reportId),
                     leading: CircleAvatar(
-                      backgroundColor:
-                          const Color(0xFFD5F2E8),
+                      backgroundColor: const Color(0xFFD5F2E8),
                       child: Icon(
                         isRead
                             ? Icons.notifications_none
@@ -1858,8 +2107,7 @@ class NotificationContent extends StatelessWidget {
                       ),
                     ),
                     subtitle: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 5),
                         Text(pesan),
@@ -1873,9 +2121,7 @@ class NotificationContent extends StatelessWidget {
                         ),
                         if (!isRead)
                           const Padding(
-                            padding: EdgeInsets.only(
-                              top: 5,
-                            ),
+                            padding: EdgeInsets.only(top: 5),
                             child: Text(
                               'Belum dibaca',
                               style: TextStyle(
@@ -1923,11 +2169,8 @@ class ProfileContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
-      return const Center(
-        child: Text('Pengguna tidak ditemukan.'),
-      );
+      return const Center(child: Text('Pengguna tidak ditemukan.'));
     }
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -1937,7 +2180,6 @@ class ProfileContent extends StatelessWidget {
           .snapshots(),
       builder: (context, snapshot) {
         final data = snapshot.data?.data() ?? {};
-
         final nama = data['nama']?.toString() ?? '';
         final email = user.email ?? '';
 
@@ -1949,11 +2191,7 @@ class ProfileContent extends StatelessWidget {
               const CircleAvatar(
                 radius: 48,
                 backgroundColor: Color(0xFFD5F2E8),
-                child: Icon(
-                  Icons.person,
-                  size: 55,
-                  color: Color(0xFF218477),
-                ),
+                child: Icon(Icons.person, size: 55, color: Color(0xFF218477)),
               ),
               const SizedBox(height: 16),
               Text(
@@ -1973,9 +2211,7 @@ class ProfileContent extends StatelessWidget {
                     ListTile(
                       leading: const Icon(Icons.person_outline),
                       title: const Text('Nama'),
-                      subtitle: Text(
-                        nama.isEmpty ? 'Belum diisi' : nama,
-                      ),
+                      subtitle: Text(nama.isEmpty ? 'Belum diisi' : nama),
                     ),
                     const Divider(height: 1),
                     ListTile(
@@ -1988,8 +2224,7 @@ class ProfileContent extends StatelessWidget {
                       leading: const Icon(Icons.phone_outlined),
                       title: const Text('Nomor WhatsApp'),
                       subtitle: Text(
-                        data['nomorWhatsApp']?.toString().isNotEmpty ==
-                                true
+                        data['nomorWhatsApp']?.toString().isNotEmpty == true
                             ? data['nomorWhatsApp'].toString()
                             : 'Belum diisi',
                       ),
@@ -2003,10 +2238,7 @@ class ProfileContent extends StatelessWidget {
                 child: ListTile(
                   leading: const CircleAvatar(
                     backgroundColor: Color(0xFFD5F2E8),
-                    child: Icon(
-                      Icons.history,
-                      color: Color(0xFF218477),
-                    ),
+                    child: Icon(Icons.history, color: Color(0xFF218477)),
                   ),
                   title: const Text(
                     'Riwayat Laporan',
@@ -2016,16 +2248,13 @@ class ProfileContent extends StatelessWidget {
                     'Lihat laporan barang yang pernah dibuat',
                   ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ReportHistoryScreen(
-                          reportService: reportService,
-                        ),
-                      ),
-                    );
-                  },
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ReportHistoryScreen(reportService: reportService),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -2036,9 +2265,7 @@ class ProfileContent extends StatelessWidget {
                   onPressed: onLogout,
                   icon: const Icon(Icons.logout),
                   label: const Text('Logout'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                  ),
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
                 ),
               ),
             ],
@@ -2054,17 +2281,14 @@ class ProfileContent extends StatelessWidget {
 class ReportHistoryScreen extends StatelessWidget {
   final ReportService reportService;
 
-  const ReportHistoryScreen({
-    super.key,
-    required this.reportService,
-  });
+  const ReportHistoryScreen({super.key, required this.reportService});
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFFFAF8F3),
+        backgroundColor: backgroundColor,
         appBar: AppBar(
           title: const Text(
             'Riwayat Laporan',
@@ -2075,10 +2299,7 @@ class ReportHistoryScreen extends StatelessWidget {
             unselectedLabelColor: Colors.grey,
             indicatorColor: Color(0xFF218477),
             tabs: [
-              Tab(
-                icon: Icon(Icons.search),
-                text: 'Barang Hilang',
-              ),
+              Tab(icon: Icon(Icons.search), text: 'Barang Hilang'),
               Tab(
                 icon: Icon(Icons.inventory_2_outlined),
                 text: 'Barang Ditemukan',
@@ -2101,37 +2322,26 @@ class ReportHistoryScreen extends StatelessWidget {
                 ),
               );
             }
-
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF218477),
-                ),
+                child: CircularProgressIndicator(color: Color(0xFF218477)),
               );
             }
 
-            final allReports = snapshot.data ?? [];
+            final List<ReportModel> sortedReports = List<ReportModel>.from(
+              snapshot.data ?? <ReportModel>[],
+            );
 
-            final sortedReports = [...allReports]
-              ..sort(
-                (a, b) => b.tanggalKejadian.compareTo(
-                  a.tanggalKejadian,
-                ),
-              );
+            sortedReports.sort(
+              (a, b) => b.tanggalKejadian.compareTo(a.tanggalKejadian),
+            );
 
-            final lostReports = sortedReports
-                .where(
-                  (report) =>
-                      report.jenisLaporan.toLowerCase() == 'hilang',
-                )
+            final List<ReportModel> lostReports = sortedReports
+                .where((r) => r.jenisLaporan.toLowerCase() == 'hilang')
                 .toList();
 
-            final foundReports = sortedReports
-                .where(
-                  (report) =>
-                      report.jenisLaporan.toLowerCase() ==
-                      'ditemukan',
-                )
+            final List<ReportModel> foundReports = sortedReports
+                .where((r) => r.jenisLaporan.toLowerCase() == 'ditemukan')
                 .toList();
 
             return TabBarView(
@@ -2161,17 +2371,12 @@ class _HistoryReportList extends StatelessWidget {
   final List<ReportModel> reports;
   final String emptyMessage;
 
-  const _HistoryReportList({
-    required this.reports,
-    required this.emptyMessage,
-  });
+  const _HistoryReportList({required this.reports, required this.emptyMessage});
 
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
-    final year = date.year.toString();
-
-    return '$day/$month/$year';
+    return '$day/$month/${date.year}';
   }
 
   @override
@@ -2183,19 +2388,12 @@ class _HistoryReportList extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.history,
-                size: 65,
-                color: Colors.grey,
-              ),
+              const Icon(Icons.history, size: 65, color: Colors.grey),
               const SizedBox(height: 16),
               Text(
                 emptyMessage,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.black54,
-                  fontSize: 14,
-                ),
+                style: const TextStyle(color: Colors.black54, fontSize: 14),
               ),
             ],
           ),
@@ -2208,10 +2406,7 @@ class _HistoryReportList extends StatelessWidget {
       itemCount: reports.length,
       itemBuilder: (context, index) {
         final report = reports[index];
-
-        final isLost =
-            report.jenisLaporan.toLowerCase() == 'hilang';
-
+        final isLost = report.jenisLaporan.toLowerCase() == 'hilang';
         final isCompleted = report.status == 'Selesai';
 
         return Card(
@@ -2223,16 +2418,12 @@ class _HistoryReportList extends StatelessWidget {
           ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ReportDetailScreen(
-                    report: report,
-                  ),
-                ),
-              );
-            },
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ReportDetailScreen(report: report),
+              ),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -2246,7 +2437,6 @@ class _HistoryReportList extends StatelessWidget {
                         width: 85,
                         height: 85,
                         iconSize: 35,
-                        fit: BoxFit.cover,
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -2317,9 +2507,7 @@ class _HistoryReportList extends StatelessWidget {
                         color: isLost
                             ? const Color(0xFFFFE1D9)
                             : const Color(0xFFD5F2E8),
-                        textColor: isLost
-                            ? Colors.deepOrange
-                            : Colors.teal,
+                        textColor: isLost ? Colors.deepOrange : Colors.teal,
                       ),
                       const SizedBox(width: 6),
                       _ReportBadge(
@@ -2344,8 +2532,7 @@ class _HistoryReportList extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Selesai pada '
-                          '${_formatDate(report.tanggalSelesai!)}',
+                          'Selesai pada ${_formatDate(report.tanggalSelesai!)}',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Color(0xFF218477),
