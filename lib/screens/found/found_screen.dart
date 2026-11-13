@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_dimens.dart';
@@ -11,6 +12,7 @@ import '../../widgets/notification_command_palette.dart';
 import '../../widgets/app_toast_stack.dart';
 import '../../widgets/status_chip.dart';
 import '../search/search_screen.dart';
+import '../post/post_report_screen.dart';
 
 /// Halaman Barang Ditemukan (Found Screen) — FindIT Campus
 ///
@@ -933,22 +935,37 @@ class _FoundScreenState extends State<FoundScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: () {
+                              onPressed: () async {
                                 final contactTarget =
                                     storageType == 'satpam'
                                         ? '${item['finderName']} (Penemu Awal)'
                                         : item['holderName'] as String;
-                                final phone = item['holderPhone'] ??
+                                final rawPhone = (item['holderPhone'] ??
                                     item['finderPhone'] ??
-                                    '081234567890';
+                                    item['finderWhatsapp'] ??
+                                    '081234567890')
+                                    .toString()
+                                    .replaceAll(RegExp(r'[^0-9]'), '');
+                                final formattedPhone = rawPhone.startsWith('0')
+                                    ? '62${rawPhone.substring(1)}'
+                                    : rawPhone;
 
                                 Navigator.pop(modalContext);
-                                AppToast.success(
-                                  context,
-                                  title: 'Membuka WhatsApp',
-                                  message:
-                                      'Menghubungkan ke $contactTarget ($phone) untuk konfirmasi klaim.',
-                                );
+                                final waUri = Uri.parse(
+                                    'https://wa.me/$formattedPhone?text=Halo%20saya%20ingin%20mengonfirmasi%20laporan%20barang%20temuan:%20${Uri.encodeComponent(item['title'] ?? '')}');
+                                if (await canLaunchUrl(waUri)) {
+                                  await launchUrl(waUri,
+                                      mode: LaunchMode.externalApplication);
+                                } else {
+                                  if (context.mounted) {
+                                    AppToast.success(
+                                      context,
+                                      title: 'Membuka WhatsApp',
+                                      message:
+                                          'Menghubungkan ke $contactTarget ($formattedPhone) untuk konfirmasi klaim.',
+                                    );
+                                  }
+                                }
                               },
                               icon: const Icon(
                                 Icons.chat_rounded,
@@ -976,19 +993,35 @@ class _FoundScreenState extends State<FoundScreen> {
                               ),
                             ),
                           ),
-                          if (storageType == 'satpam') ...[
+                          if (storageType != 'student' ||
+                              (item['mapsUrl'] != null &&
+                                  (item['mapsUrl'] as String).isNotEmpty)) ...[
                             const SizedBox(height: 8),
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton.icon(
-                                onPressed: () {
+                                onPressed: () async {
                                   Navigator.pop(modalContext);
-                                  AppToast.info(
-                                    context,
-                                    title: 'Lokasi Pos Satpam',
-                                    message:
-                                        '${item['storageLabel']} (${item['operatingHours']}). Bawa bukti sah.',
-                                  );
+                                  final mapsUrl = item['mapsUrl'] as String?;
+                                  if (mapsUrl != null &&
+                                      mapsUrl.trim().isNotEmpty) {
+                                    final uri = Uri.tryParse(mapsUrl.trim());
+                                    if (uri != null &&
+                                        await canLaunchUrl(uri)) {
+                                      await launchUrl(uri,
+                                          mode: LaunchMode
+                                              .externalApplication);
+                                      return;
+                                    }
+                                  }
+                                  if (context.mounted) {
+                                    AppToast.info(
+                                      context,
+                                      title: 'Petunjuk Lokasi',
+                                      message:
+                                          '${item['storageLabel']} (${item['operatingHours'] ?? 'Buka saat jam operasional'}). Bawa kartu identitas sah.',
+                                    );
+                                  }
                                 },
                                 icon: const Icon(
                                   Icons.near_me_outlined,
@@ -996,7 +1029,9 @@ class _FoundScreenState extends State<FoundScreen> {
                                   color: Color(0xFF17695D),
                                 ),
                                 label: Text(
-                                  'Petunjuk Rute ke Pos Satpam',
+                                  storageType == 'satpam'
+                                      ? 'Petunjuk Rute ke Pos Satpam'
+                                      : 'Petunjuk Rute Lokasi Penitipan',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
@@ -1136,11 +1171,74 @@ class _FoundScreenState extends State<FoundScreen> {
                 }
               },
               onPostTap: () {
-                AppToast.info(
+                Navigator.push<Map<String, dynamic>>(
                   context,
-                  title: 'Formulir Laporan',
-                  message: 'Membuka form pembuatan laporan temuan baru.',
-                );
+                  SmoothPageRoute(
+                    child: const PostReportScreen(initialType: ReportType.found),
+                  ),
+                ).then((newReport) {
+                  if (newReport != null && mounted) {
+                    final storageType =
+                        newReport['storageType'] as String? ?? 'student';
+                    final storageLabel = newReport['storageLabel'] as String? ??
+                        'Dipegang Penemu';
+                    final holderName =
+                        (newReport['holderName'] as String?)?.isNotEmpty == true
+                            ? newReport['holderName']
+                            : (storageType == 'satpam'
+                                ? 'Petugas Satpam'
+                                : 'Kamu (Penemu)');
+                    final phone =
+                        newReport['phone'] as String? ?? '081234567890';
+                    final mapsUrl = newReport['mapsUrl'] as String?;
+
+                    setState(() {
+                      _foundItems.insert(0, {
+                        'id': 'found-${DateTime.now().millisecondsSinceEpoch}',
+                        'title': newReport['title'],
+                        'category': newReport['category'],
+                        'location': newReport['location'],
+                        'campus': 'Ketintang',
+                        'timeAgo': 'Baru saja',
+                        'date': newReport['date'],
+                        'storageType': storageType,
+                        'storageLabel': storageLabel,
+                        'storageDesc': storageType == 'satpam'
+                            ? 'Barang diamankan di pos satpam kampus.'
+                            : (storageType == 'official'
+                                ? 'Barang diamankan di loket resmi kampus.'
+                                : 'Barang saat ini dipegang oleh penemu.'),
+                        'storageIcon': storageType == 'satpam'
+                            ? Icons.shield_outlined
+                            : (storageType == 'official'
+                                ? Icons.account_balance_outlined
+                                : Icons.backpack_outlined),
+                        'status': ReportStatus.found,
+                        'isUrgent': false,
+                        'viewCount': 1,
+                        'finderName': 'Kamu',
+                        'finderRole': 'Mahasiswa · UNESA',
+                        'holderName': holderName,
+                        'holderPhone': phone,
+                        'finderPhone': phone,
+                        'finderWhatsapp': phone,
+                        'mapsUrl': mapsUrl,
+                        'operatingHours': storageType == 'satpam'
+                            ? 'Pos Jaga 24 Jam Non-stop'
+                            : (storageType == 'official'
+                                ? 'Jam Kerja Kampus (08.00 - 16.00 WIB)'
+                                : 'Sesuai koordinasi via WhatsApp'),
+                        'description': newReport['description'],
+                        'snippet': newReport['description'],
+                        'claimRequirement':
+                            'Wajib mencocokkan ciri khusus atau kartu identitas.',
+                        'requiredProof':
+                            'Wajib menunjukkan bukti sah saat serah terima barang.',
+                        'isVerified': true,
+                      });
+                    });
+                  }
+                });
               },
             ),
           ),
