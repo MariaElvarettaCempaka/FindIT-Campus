@@ -14,6 +14,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  bool _isButtonPressed = false;
 
   void _onSkipOrLogin() {
     Navigator.pushReplacement(
@@ -113,25 +114,40 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Action Button ("Lanjut" / "Mulai")
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _onNext,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1F7A6B), // Teal
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
+                  // Action Button ("Lanjut" / "Mulai") dengan Tactile Spring Feedback (/apple-design)
+                  GestureDetector(
+                    onTapDown: (_) => setState(() => _isButtonPressed = true),
+                    onTapUp: (_) {
+                      setState(() => _isButtonPressed = false);
+                      _onNext();
+                    },
+                    onTapCancel: () => setState(() => _isButtonPressed = false),
+                    child: AnimatedScale(
+                      scale: _isButtonPressed ? 0.96 : 1.0,
+                      duration: const Duration(milliseconds: 120),
+                      curve: Curves.easeOutCubic,
+                      child: Container(
+                        width: double.infinity,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1F7A6B), // Teal
                           borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF1F7A6B).withValues(alpha: 0.28),
+                              blurRadius: _isButtonPressed ? 6 : 14,
+                              offset: Offset(0, _isButtonPressed ? 2 : 6),
+                            ),
+                          ],
                         ),
-                      ),
-                      child: Text(
-                        _currentPage == 2 ? 'Mulai' : 'Lanjut',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                        alignment: Alignment.center,
+                        child: Text(
+                          _currentPage == 2 ? 'Mulai' : 'Lanjut',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -540,11 +556,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                       color: const Color(0xFFFFD9CC), // Peach
                                       borderRadius: BorderRadius.circular(14),
                                     ),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.account_balance_wallet_outlined,
-                                        size: 24,
-                                        color: Color(0xFF12312E),
+                                    child: Center(
+                                      child: CustomPaint(
+                                        size: const Size(26, 26),
+                                        painter: _OnboardingWalletIconPainter(),
                                       ),
                                     ),
                                   ),
@@ -637,11 +652,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                       color: const Color(0xFFBFE9DA), // Mint
                                       borderRadius: BorderRadius.circular(14),
                                     ),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.account_balance_wallet_outlined,
-                                        size: 24,
-                                        color: Color(0xFF12312E),
+                                    child: Center(
+                                      child: CustomPaint(
+                                        size: const Size(26, 26),
+                                        painter: _OnboardingWalletIconPainter(),
                                       ),
                                     ),
                                   ),
@@ -815,16 +829,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Header Kartu Peach (110px) dengan Ikon Dompet
+                                // Header Kartu Peach (110px) dengan Ikon Dompet Apple-Style Refined
                                 Container(
                                   height: 110,
                                   width: double.infinity,
                                   color: const Color(0xFFFFD9CC), // Peach header
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.account_balance_wallet_outlined,
-                                      size: 46,
-                                      color: Color(0xFF12312E),
+                                  child: Center(
+                                    child: CustomPaint(
+                                      size: const Size(54, 54),
+                                      painter: _OnboardingWalletIconPainter(
+                                        strokeWidth: 3.2,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -989,4 +1004,85 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       },
     );
   }
+}
+
+/// Painter Dompet Bergaya Apple Wallet / Leather Bifold (/apple-design, /ui-taste)
+/// Menggantikan ikon garis generik material dengan proporsi elegan, card slot, dan hardware clasp
+class _OnboardingWalletIconPainter extends CustomPainter {
+  final double strokeWidth;
+
+  const _OnboardingWalletIconPainter({this.strokeWidth = 2.2});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final strokePaint = Paint()
+      ..color = const Color(0xFF12312E)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final w = size.width * 0.85;
+    final h = size.height * 0.62;
+
+    // 1. Body Dompet Utama
+    final walletRect = Rect.fromCenter(
+      center: center + Offset(0, size.height * 0.03),
+      width: w,
+      height: h,
+    );
+    final walletRRect = RRect.fromRectAndRadius(
+      walletRect,
+      Radius.circular(size.width * 0.16),
+    );
+    canvas.drawRRect(walletRRect, strokePaint);
+
+    // 2. Garis Lipatan / Slot Kartu
+    final slotPath = Path()
+      ..moveTo(walletRect.left + w * 0.1, walletRect.top + h * 0.32)
+      ..cubicTo(
+        walletRect.left + w * 0.35,
+        walletRect.top + h * 0.40,
+        walletRect.right - w * 0.35,
+        walletRect.top + h * 0.40,
+        walletRect.right - w * 0.1,
+        walletRect.top + h * 0.32,
+      );
+    final slotPaint = Paint()
+      ..color = const Color(0xFF12312E)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth * 0.8
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(slotPath, slotPaint);
+
+    // 3. Clasp Lid / Tab Kancing di Kanan
+    final claspWidth = w * 0.24;
+    final claspHeight = h * 0.42;
+    final claspRect = Rect.fromCenter(
+      center: Offset(walletRect.right - claspWidth * 0.35, walletRect.center.dy + 1),
+      width: claspWidth,
+      height: claspHeight,
+    );
+    final claspRRect = RRect.fromRectAndRadius(
+      claspRect,
+      Radius.circular(claspWidth * 0.35),
+    );
+
+    // Fill pembersih agar tidak tembus garis body
+    final claspBg = Paint()
+      ..color = const Color(0xFFFFD9CC)
+      ..style = PaintingStyle.fill;
+    canvas.drawRRect(claspRRect, claspBg);
+    canvas.drawRRect(claspRRect, strokePaint);
+
+    // Kancing Stud Hardware di Tengah Clasp
+    final studPaint = Paint()
+      ..color = const Color(0xFF12312E)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(claspRect.center, strokeWidth * 0.55, studPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
