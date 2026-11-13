@@ -47,28 +47,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Bar: "Lewati" (slide 1 & 2) atau "Masuk" (slide 3)
+            // Top Bar: "Lewati" (hanya muncul di slide 1 & 2; di slide 3 disembunyikan agar fokus ke tombol "Mulai")
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _onSkipOrLogin,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        _currentPage == 2 ? 'Masuk' : 'Lewati',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1F7A6B), // Teal
+              child: SizedBox(
+                height: 38,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (_currentPage < 2)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _onSkipOrLogin,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            'Lewati',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1F7A6B), // Teal
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 

@@ -26,7 +26,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _isEditPressed = false;
   bool _isLogoutPressed = false;
 
   String _formatDisplayPhone(String raw) {
@@ -157,51 +156,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                      // Tombol Edit Bundar 44x44
-                      GestureDetector(
-                        onTapDown: (_) => setState(() => _isEditPressed = true),
-                        onTapUp: (_) async {
-                          setState(() => _isEditPressed = false);
-                          final updated = await Navigator.push<bool>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const EditProfileScreen(),
-                            ),
-                          );
-                          if (updated == true && mounted) {
-                            setState(() {});
-                          }
-                        },
-                        onTapCancel: () =>
-                            setState(() => _isEditPressed = false),
-                        child: AnimatedScale(
-                          scale: _isEditPressed ? 0.90 : 1.0,
-                          duration: const Duration(milliseconds: 110),
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF12312E)
-                                      .withValues(alpha: 0.08),
-                                  offset: const Offset(0, 4),
-                                  blurRadius: 10,
-                                ),
-                              ],
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.edit_outlined,
-                                color: Color(0xFF12312E),
-                                size: 20,
-                              ),
-                            ),
-                          ),
                         ),
                       ),
                     ],
