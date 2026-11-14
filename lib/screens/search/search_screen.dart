@@ -6,6 +6,7 @@ import '../../widgets/item_card.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/app_toast_stack.dart';
 import '../found/found_screen.dart';
+import '../profile/profile_screen.dart';
 import '../post/post_report_screen.dart';
 
 /// Halaman Pencarian Interaktif (Figma Node 181:2536, 181:2559, & 181:2664).
@@ -234,6 +235,15 @@ class _SearchScreenState extends State<SearchScreen> {
                     context,
                     SmoothPageRoute(child: const FoundScreen()),
                   );
+                } else if (index == 3) {
+                  Navigator.push(
+                    context,
+                    SmoothPageRoute(child: const ProfileScreen()),
+                  ).then((_) {
+                    if (mounted) {
+                      setState(() => _currentNavIndex = 1);
+                    }
+                  });
                 } else {
                   setState(() => _currentNavIndex = index);
                 }

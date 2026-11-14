@@ -322,63 +322,72 @@ class _NotificationCommandPaletteState
     final media = MediaQuery.of(context);
     final filtered = _filteredNotifications;
 
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-      child: Center(
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            width: double.infinity,
-            constraints: BoxConstraints(
-              maxHeight: media.size.height * 0.80,
-              maxWidth: 440, // Lebar ideal mobile/tablet
-            ),
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            decoration: BoxDecoration(
-              // Apple Translucent Glass Surface
-              color: Colors.white.withValues(alpha: 0.90),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.95),
-                width: 1.4,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF12312E).withValues(alpha: 0.20),
-                  blurRadius: 40,
-                  offset: const Offset(0, 18),
-                  spreadRadius: -4,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.pop(context, _unreadCount),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Center(
+          child: GestureDetector(
+            // Mencegah klik di dalam kartu dialog agar tidak menutup dialog
+            behavior: HitTestBehavior.opaque,
+            onTap: () {},
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: double.infinity,
+                constraints: BoxConstraints(
+                  maxHeight: media.size.height * 0.80,
+                  maxWidth: 440, // Lebar ideal mobile/tablet
                 ),
-                BoxShadow(
-                  color: const Color(0xFF12312E).withValues(alpha: 0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(28),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 1. Search Bar & Header Row (Motion.dev Palette Header)
-                  _buildPaletteSearchHeader(),
-
-                  // 2. Filter Pills & Tandai Dibaca Row
-                  _buildFilterRow(),
-
-                  const Divider(height: 1, color: Color(0xFFE8EFEA)),
-
-                  // 3. Scrollable Notification List
-                  Expanded(
-                    child: filtered.isEmpty
-                        ? _buildEmptyState()
-                        : _buildNotificationList(filtered),
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                decoration: BoxDecoration(
+                  // Apple Translucent Glass Surface
+                  color: Colors.white.withValues(alpha: 0.90),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.95),
+                    width: 1.4,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF12312E).withValues(alpha: 0.20),
+                      blurRadius: 40,
+                      offset: const Offset(0, 18),
+                      spreadRadius: -4,
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFF12312E).withValues(alpha: 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 1. Search Bar & Header Row (Motion.dev Palette Header)
+                      _buildPaletteSearchHeader(),
 
-                  // 4. Command Palette Footer Bar
-                  _buildPaletteFooter(),
-                ],
+                      // 2. Filter Pills & Tandai Dibaca Row
+                      _buildFilterRow(),
+
+                      const Divider(height: 1, color: Color(0xFFE8EFEA)),
+
+                      // 3. Scrollable Notification List
+                      Expanded(
+                        child: filtered.isEmpty
+                            ? _buildEmptyState()
+                            : _buildNotificationList(filtered),
+                      ),
+
+                      // 4. Command Palette Footer Bar
+                      _buildPaletteFooter(),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -904,10 +913,11 @@ class _NotificationCommandPaletteState
   }
 
   // ===========================================================================
-  // 4. COMMAND PALETTE FOOTER (Mobile Status Hint)
+  // 4. COMMAND PALETTE FOOTER (Mobile Status Hint - Tanpa Tombol Silang Ganda)
   // ===========================================================================
   Widget _buildPaletteFooter() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.70),
@@ -915,46 +925,26 @@ class _NotificationCommandPaletteState
           top: BorderSide(color: Color(0xFFE8EFEA), width: 1),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.touch_app_outlined,
-                size: 13,
-                color: Color(0xFF17695D),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'Ketuk notifikasi untuk baca detail',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.slate600,
-                ),
-              ),
-            ],
-          ),
-          GestureDetector(
-            onTap: () => Navigator.pop(context, _unreadCount),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFF17695D).withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Tutup ✕',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF17695D),
-                ),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.touch_app_outlined,
+              size: 13,
+              color: Color(0xFF17695D),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              'Ketuk notifikasi untuk baca detail · Ketuk luar untuk menutup',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.slate600,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

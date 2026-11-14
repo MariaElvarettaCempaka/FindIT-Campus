@@ -12,6 +12,7 @@ import '../../widgets/notification_command_palette.dart';
 import '../../widgets/app_toast_stack.dart';
 import '../../widgets/status_chip.dart';
 import '../search/search_screen.dart';
+import '../profile/profile_screen.dart';
 import '../post/post_report_screen.dart';
 
 /// Halaman Barang Ditemukan (Found Screen) — FindIT Campus
@@ -1026,23 +1027,22 @@ class _FoundScreenState extends State<FoundScreen> {
                                 onPressed: () async {
                                   Navigator.pop(modalContext);
                                   final mapsUrl = item['mapsUrl'] as String?;
-                                  if (mapsUrl != null &&
-                                      mapsUrl.trim().isNotEmpty) {
-                                    final uri = Uri.tryParse(mapsUrl.trim());
-                                    if (uri != null &&
-                                        await canLaunchUrl(uri)) {
+                                  if (mapsUrl != null && mapsUrl.isNotEmpty) {
+                                    final uri = Uri.parse(mapsUrl);
+                                    if (await canLaunchUrl(uri)) {
                                       await launchUrl(uri,
-                                          mode: LaunchMode
-                                              .externalApplication);
+                                          mode: LaunchMode.externalApplication);
                                       return;
                                     }
                                   }
                                   if (context.mounted) {
                                     AppToast.info(
                                       context,
-                                      title: 'Petunjuk Lokasi',
+                                      title: storageType == 'satpam'
+                                          ? 'Lokasi Pos Satpam'
+                                          : 'Lokasi Penitipan',
                                       message:
-                                          '${item['storageLabel']} (${item['operatingHours'] ?? 'Buka saat jam operasional'}). Bawa kartu identitas sah.',
+                                          '${item['storageLabel']} (${item['operatingHours']}). Bawa bukti atau kartu identitas sah.',
                                     );
                                   }
                                 },
@@ -1185,11 +1185,10 @@ class _FoundScreenState extends State<FoundScreen> {
                   );
                 } else if (index == 2) {
                   // Sudah di halaman Ditemukan, scroll to top
-                } else {
-                  AppToast.info(
+                } else if (index == 3) {
+                  Navigator.push(
                     context,
-                    title: 'Modul Profil',
-                    message: 'Halaman Profil dikerjakan oleh Orang 4.',
+                    SmoothPageRoute(child: const ProfileScreen()),
                   );
                 }
               },
