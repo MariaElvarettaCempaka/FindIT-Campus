@@ -4,10 +4,11 @@ import '../../core/smooth_page_route.dart';
 import '../../widgets/floating_bottom_nav.dart';
 import '../../widgets/item_card.dart';
 import '../../widgets/status_chip.dart';
-import '../../widgets/app_toast_stack.dart';
 import '../found/found_screen.dart';
 import '../profile/profile_screen.dart';
 import '../post/post_report_screen.dart';
+import '../detail/detail_screen.dart';
+import '../../models/report_item_model.dart';
 
 /// Halaman Pencarian Interaktif (Figma Node 181:2536, 181:2559, & 181:2664).
 /// Menggabungkan 3 state visual dinamis:
@@ -580,12 +581,23 @@ class _SearchScreenState extends State<SearchScreen> {
             icon: item['icon'] as IconData?,
             snippet: item['description'] as String?,
             onTap: () {
-              AppToast.info(
-                context,
-                title: 'Detail Barang',
-                message:
-                    'Detail "${item['title']}" akan dibuka oleh modul Orang 4.',
-              );
+              final isLost = item['status'] == ReportStatus.lost;
+              if (isLost) {
+                final model = ReportItemModel.fromMap(item);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DetailScreen(report: model),
+                  ),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const FoundScreen(),
+                  ),
+                );
+              }
             },
           );
         }),

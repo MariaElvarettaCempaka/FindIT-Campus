@@ -12,6 +12,8 @@ import '../search/search_screen.dart';
 import '../found/found_screen.dart';
 import '../profile/profile_screen.dart';
 import '../post/post_report_screen.dart';
+import '../detail/detail_screen.dart';
+import '../../models/report_item_model.dart';
 
 /// Halaman Beranda (Home / Default & Home / Filter Active).
 /// Implementasi presisi 1:1 sesuai Figma Node 181:2788 & Node 181:2652.
@@ -161,11 +163,44 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _navigateToDetail(String title) {
-    AppToast.info(
+  void _navigateToDetail(String title, [Map<String, dynamic>? itemData, bool isOwner = false]) {
+    final item = itemData ??
+        _campusFeedItems.firstWhere(
+          (element) => element['title'] == title,
+          orElse: () => {
+            'title': title,
+            'status': ReportStatus.lost,
+            'description': 'Barang dilaporkan hilang di area kampus.',
+            'location': 'Kampus Ketintang UNESA',
+            'category': 'Lainnya',
+            'date': 'Hari ini',
+            'timeAgo': 'Baru saja',
+            'reporterName': isOwner ? 'Farrel Farica' : 'Mahasiswa UNESA',
+            'reporterRole': 'Mahasiswa · SI 2024',
+          },
+        );
+
+    final isLost = item['status'] == ReportStatus.lost || isOwner;
+    if (!isLost) {
+      // Laporan barang ditemukan diarahkan ke modul FoundScreen (alur klaim satpam)
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const FoundScreen(),
+        ),
+      );
+      return;
+    }
+
+    final reportModel = ReportItemModel.fromMap(item, isOwner: isOwner);
+    Navigator.push(
       context,
-      title: 'Detail Barang',
-      message: 'Detail "$title" akan dibuka oleh modul Orang 4.',
+      MaterialPageRoute(
+        builder: (_) => DetailScreen(
+          report: reportModel,
+          isOwner: isOwner,
+        ),
+      ),
     );
   }
 
@@ -746,7 +781,7 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: item['icon'] as IconData?,
           snippet: item['snippet'] as String?,
           onTap: () {
-            _navigateToDetail(item['title'] as String);
+            _navigateToDetail(item['title'] as String, item);
           },
         );
       }).toList(),
@@ -884,7 +919,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onTapDown: (_) => setState(() => _isMyReportPressed = true),
           onTapUp: (_) {
             setState(() => _isMyReportPressed = false);
-            _navigateToDetail('Dompet kulit hitam');
+            _navigateToDetail('Dompet kulit hitam', null, true);
           },
           onTapCancel: () => setState(() => _isMyReportPressed = false),
           child: AnimatedScale(
@@ -1097,7 +1132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               setState(() => _isManagePressed = true),
                           onTapUp: (_) {
                             setState(() => _isManagePressed = false);
-                            _navigateToDetail('Dompet kulit hitam');
+                            _navigateToDetail('Dompet kulit hitam', null, true);
                           },
                           onTapCancel: () =>
                               setState(() => _isManagePressed = false),
@@ -1246,7 +1281,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: item['icon'] as IconData?,
             snippet: item['snippet'] as String?,
             onTap: () {
-              _navigateToDetail(item['title'] as String);
+              _navigateToDetail(item['title'] as String, item);
             },
           );
         }),

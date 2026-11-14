@@ -8,6 +8,7 @@ import '../found/found_screen.dart';
 import '../home/home_screen.dart';
 import '../search/search_screen.dart';
 import 'edit_profile_screen.dart';
+import 'report_history_screen.dart';
 import 'widgets/logout_dialog.dart';
 
 /// Halaman 9 · Profil Pengguna (Figma Node 181:2164).
@@ -266,10 +267,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ],
                           ),
                           onTap: () {
-                            AppToast.info(
+                            Navigator.push(
                               context,
-                              title: 'Riwayat Laporan',
-                              message: 'Membuka riwayat laporan kamu.',
+                              MaterialPageRoute(
+                                builder: (_) => const ReportHistoryScreen(),
+                              ),
                             );
                           },
                         ),
