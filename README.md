@@ -10,18 +10,18 @@ Informasi barang hilang di kampus biasanya disebar lewat grup obrolan seperti Wh
 
 ## Fitur
 
-- [ ] F01 Registrasi akun
-- [ ] F02 Login
-- [ ] F03 Posting barang hilang
-- [ ] F04 Posting barang ditemukan
-- [ ] F05 Daftar barang hilang
-- [ ] F06 Daftar barang ditemukan
-- [ ] F07 Pencarian dan filter kategori
-- [ ] F08 Detail barang
-- [ ] F09 Hubungi pembuat laporan via WhatsApp
-- [ ] F10 Riwayat laporan
-- [ ] F11 Edit dan hapus laporan
-- [ ] F12 Ubah status laporan (Sudah Ditemukan / Sudah Dikembalikan)
+- [x] F01 Registrasi akun
+- [x] F02 Login
+- [x] F03 Posting barang hilang
+- [x] F04 Posting barang ditemukan
+- [x] F05 Daftar barang hilang
+- [x] F06 Daftar barang ditemukan
+- [x] F07 Pencarian dan filter kategori
+- [x] F08 Detail barang
+- [x] F09 Hubungi pembuat laporan via WhatsApp
+- [x] F10 Riwayat laporan
+- [x] F11 Edit dan hapus laporan
+- [x] F12 Ubah status laporan (Sudah Ditemukan / Sudah Dikembalikan)
 
 ## Teknologi
 
