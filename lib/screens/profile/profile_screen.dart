@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/smooth_page_route.dart';
 import '../../services/auth_service.dart';
-import '../../widgets/app_toast_stack.dart';
 import '../../widgets/floating_bottom_nav.dart';
 import '../auth/login_screen.dart';
 import '../found/found_screen.dart';
 import '../home/home_screen.dart';
+import '../post/post_report_screen.dart';
 import '../search/search_screen.dart';
 import 'edit_profile_screen.dart';
 import 'report_history_screen.dart';
@@ -384,10 +385,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               currentIndex: 3, // Tab Profil aktif
               onTabSelected: _onBottomNavSelected,
               onPostTap: () {
-                AppToast.info(
+                Navigator.push<Map<String, dynamic>>(
                   context,
-                  title: 'Formulir Laporan',
-                  message: 'Buka formulir pembuatan laporan.',
+                  SmoothPageRoute(
+                    child: const PostReportScreen(
+                      initialType: ReportType.lost,
+                      initialCampus: 'Ketintang',
+                    ),
+                  ),
                 );
               },
             ),
