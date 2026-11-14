@@ -277,8 +277,11 @@ class _ToastStackLayer extends StatelessWidget {
   }
 }
 
-/// Kartu Toast Individual dengan Apple Glassy Blur & Motion Spring Physics
-class _StackedToastCard extends StatelessWidget {
+/// Kartu Toast Individual dengan Animasi Resep /charles-ux-animation:
+/// - 240ms entrance: rising 18px from below, scale 0.94 -> 1.0, fade 0 -> 1 dengan kurva cubic-bezier(0.32, 0.72, 0, 1)
+/// - 170ms exit: fade & slide down dengan kurva cubic-bezier(0.55, 0, 1, 0.45)
+/// - Glassy backdrop blur 20px & multi-layer shadow khas Apple
+class _StackedToastCard extends StatefulWidget {
   final AppToastItem toast;
   final int depth;
   final VoidCallback onDismiss;
@@ -291,12 +294,81 @@ class _StackedToastCard extends StatelessWidget {
   });
 
   @override
+  State<_StackedToastCard> createState() => _StackedToastCardState();
+}
+
+class _StackedToastCardState extends State<_StackedToastCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+  late final Animation<double> _fadeAnim;
+  late final Animation<Offset> _slideAnim;
+  late final Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    // Durasi & Kurva standar /charles-ux-animation (recipes.md #toast)
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+      reverseDuration: const Duration(milliseconds: 170),
+    );
+
+    const easeOut = Cubic(0.32, 0.72, 0.0, 1.0);
+    const easeIn = Cubic(0.55, 0.0, 1.0, 0.45);
+
+    _fadeAnim = CurvedAnimation(
+      parent: _animController,
+      curve: easeOut,
+      reverseCurve: easeIn,
+    );
+
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0.0, 0.28), // naik 18px dari bawah
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: easeOut,
+        reverseCurve: easeIn,
+      ),
+    );
+
+    _scaleAnim = Tween<double>(
+      begin: 0.94,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: easeOut,
+        reverseCurve: easeIn,
+      ),
+    );
+
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _dismissWithAnimation() {
+    _animController.reverse().then((_) {
+      if (mounted) {
+        widget.onDismiss();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     Color iconColor;
     Color iconBg;
     IconData iconData;
 
-    switch (toast.type) {
+    switch (widget.toast.type) {
       case ToastType.success:
         iconColor = const Color(0xFF2DD4BF);
         iconBg = const Color(0xFF0F766E).withValues(alpha: 0.35);
@@ -319,158 +391,167 @@ class _StackedToastCard extends StatelessWidget {
         break;
     }
 
-    return Dismissible(
-      key: ValueKey(toast.id),
-      direction: DismissDirection.horizontal,
-      onDismissed: (_) => onDismiss(),
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF041412).withValues(
-                  alpha: depth == 0 ? 0.32 : 0.16,
-                ),
-                offset: Offset(0, depth == 0 ? 10 : 4),
-                blurRadius: depth == 0 ? 28 : 14,
-                spreadRadius: -2,
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: SlideTransition(
+        position: _slideAnim,
+        child: ScaleTransition(
+          scale: _scaleAnim,
+          child: Dismissible(
+            key: ValueKey(widget.toast.id),
+            direction: DismissDirection.horizontal,
+            onDismissed: (_) => widget.onDismiss(),
+            child: Material(
+              color: Colors.transparent,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF132724).withValues(alpha: 0.94),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.16),
-                    width: 1.2,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    // Leading Squircle Icon
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: iconBg,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: iconColor.withValues(alpha: 0.25),
-                          width: 1,
-                        ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF041412).withValues(
+                        alpha: widget.depth == 0 ? 0.32 : 0.16,
                       ),
-                      child: Center(
-                        child: Icon(
-                          iconData,
-                          color: iconColor,
-                          size: 17,
-                        ),
-                      ),
+                      offset: Offset(0, widget.depth == 0 ? 10 : 4),
+                      blurRadius: widget.depth == 0 ? 28 : 14,
+                      spreadRadius: -2,
                     ),
-                    const SizedBox(width: 12),
-
-                    // Text Content (Title & Message)
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF132724).withValues(alpha: 0.94),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Row(
                         children: [
-                          if (toast.title != null) ...[
-                            Text(
-                              toast.title!,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                                letterSpacing: -0.2,
+                          // Leading Squircle Icon
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: iconBg,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: iconColor.withValues(alpha: 0.25),
+                                width: 1,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 1.5),
+                            child: Center(
+                              child: Icon(
+                                iconData,
+                                color: iconColor,
+                                size: 17,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // Text Content (Title & Message)
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (widget.toast.title != null) ...[
+                                  Text(
+                                    widget.toast.title!,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      letterSpacing: -0.2,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 1.5),
+                                ],
+                                Text(
+                                  widget.toast.message,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: widget.toast.title != null
+                                        ? FontWeight.w500
+                                        : FontWeight.w600,
+                                    color: widget.toast.title != null
+                                        ? Colors.white.withValues(alpha: 0.88)
+                                        : Colors.white,
+                                    height: 1.25,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Optional Tactile Action Button
+                          if (widget.toast.actionLabel != null) ...[
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                widget.toast.onAction?.call();
+                                _dismissWithAnimation();
+                              },
+                              behavior: HitTestBehavior.opaque,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 11, vertical: 5.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF17695D),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.20),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF17695D)
+                                          .withValues(alpha: 0.40),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  widget.toast.actionLabel!,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
-                          Text(
-                            toast.message,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: toast.title != null
-                                  ? FontWeight.w500
-                                  : FontWeight.w600,
-                              color: toast.title != null
-                                  ? Colors.white.withValues(alpha: 0.88)
-                                  : Colors.white,
-                              height: 1.25,
+
+                          // Close Dismiss Button
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: _dismissWithAnimation,
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.all(5),
+                              child: Icon(
+                                Icons.close_rounded,
+                                size: 16,
+                                color: Colors.white.withValues(alpha: 0.50),
+                              ),
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-
-                    // Optional Tactile Action Button
-                    if (toast.actionLabel != null) ...[
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () {
-                          toast.onAction?.call();
-                          onDismiss();
-                        },
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 11, vertical: 5.5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF17695D),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.20),
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF17695D)
-                                    .withValues(alpha: 0.40),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            toast.actionLabel!,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-
-                    // Close Dismiss Button
-                    const SizedBox(width: 4),
-                    GestureDetector(
-                      onTap: onDismiss,
-                      behavior: HitTestBehavior.opaque,
-                      child: Padding(
-                        padding: const EdgeInsets.all(5),
-                        child: Icon(
-                          Icons.close_rounded,
-                          size: 16,
-                          color: Colors.white.withValues(alpha: 0.50),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
