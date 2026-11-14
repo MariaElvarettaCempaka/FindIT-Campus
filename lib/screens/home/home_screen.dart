@@ -11,6 +11,7 @@ import '../../widgets/status_chip.dart';
 import '../search/search_screen.dart';
 import '../found/found_screen.dart';
 import '../profile/profile_screen.dart';
+import '../post/post_report_screen.dart';
 
 /// Halaman Beranda (Home / Default & Home / Filter Active).
 /// Implementasi presisi 1:1 sesuai Figma Node 181:2788 & Node 181:2652.
@@ -183,6 +184,44 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _navigateToCreateReport([ReportType initialType = ReportType.lost]) async {
+    final activeCampus = _currentLocation.toLowerCase().contains('lidah')
+        ? 'Lidah Wetan'
+        : 'Ketintang';
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      SmoothPageRoute(
+        child: PostReportScreen(
+          initialType: initialType,
+          initialCampus: activeCampus,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _campusFeedItems.insert(0, {
+          'title': result['title'],
+          'location': '${result['location']} • Baru saja',
+          'date': result['date'],
+          'category': result['category'],
+          'timeAgo': 'Baru saja',
+          'status': result['type'] == ReportType.lost
+              ? ReportStatus.lost
+              : ReportStatus.found,
+          'icon': Icons.inventory_2_outlined,
+          'snippet': result['description'],
+          'description': result['description'],
+          'phone': result['phone'],
+          'storageLabel': result['storageLabel'],
+          'mapsUrl': result['mapsUrl'],
+          'reporterName': 'Kamu',
+          'reporterRole': 'Mahasiswa · UNESA',
+        });
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -264,11 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
               onPostTap: () {
-                AppToast.info(
-                  context,
-                  title: 'Formulir Laporan',
-                  message: 'Buka form pembuatan laporan baru.',
-                );
+                _navigateToCreateReport(ReportType.lost);
               },
             ),
           ),
@@ -638,11 +673,7 @@ class _HomeScreenState extends State<HomeScreen> {
             // Tombol "+ Buat Laporan" (Node 181:2650)
             GestureDetector(
               onTap: () {
-                AppToast.info(
-                  context,
-                  title: 'Formulir Laporan',
-                  message: 'Buka form pembuatan laporan baru.',
-                );
+                _navigateToCreateReport(ReportType.lost);
               },
               child: Container(
                 height: 48,
