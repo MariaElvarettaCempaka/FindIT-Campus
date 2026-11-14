@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_dimens.dart';
+import '../../core/campus_locations.dart';
 import '../../core/smooth_page_route.dart';
 import '../../widgets/app_toast_stack.dart';
 import '../../widgets/floating_bottom_nav.dart';
@@ -34,10 +35,12 @@ enum ReportType {
 /// 9. Validasi error form reaktif (exact "required !!!" style)
 class PostReportScreen extends StatefulWidget {
   final ReportType initialType;
+  final String initialCampus;
 
   const PostReportScreen({
     super.key,
     this.initialType = ReportType.lost,
+    this.initialCampus = 'Ketintang',
   });
 
   @override
@@ -88,6 +91,25 @@ class _PostReportScreenState extends State<PostReportScreen> {
   XFile? _selectedImage;
   final ImagePicker _imagePicker = ImagePicker();
 
+  // Preset Rekomendasi Pos Satpam UNESA (Ketintang & Lidah Wetan)
+  final List<String> _unesaSatpamPresets = const [
+    'Pos Satpam FT Ketintang',
+    'Pos Satpam Rektorat Ketintang',
+    'Pos Satpam Gerbang Utama',
+    'Pos Satpam FEB / FISIPOL',
+    'Pos Satpam Gerbang Lidah Wetan',
+    'Pos Satpam FBS / FIP Lidah Wetan',
+    'Pos Satpam Danau UNESA',
+  ];
+
+  // State Perkiraan Sesi / Jam Penemuan (Khusus Barang Ditemukan)
+  String? _selectedTimeSession;
+
+  // State Kampus & Smart Autocomplete Lokasi (Ketintang & Lidah Wetan)
+  late String _selectedCampus;
+  List<CampusLocation> _locationSuggestions = [];
+  bool _showLocationSuggestions = false;
+
   // State Validasi Error
   String? _nameError;
   String? _phoneError;
@@ -100,6 +122,9 @@ class _PostReportScreenState extends State<PostReportScreen> {
   bool _isPublishing = false;
   double _publishButtonScale = 1.0;
 
+  // Dedicated Scroll Controller untuk fluid hardware-accelerated 60/120 FPS
+  final ScrollController _scrollController = ScrollController();
+
   // Navigasi Bottom Bar (Index 0: Home, 1: Hilang, 2: Ditemukan, 3: Profil)
   int _currentNavIndex = 0;
 
@@ -107,6 +132,8 @@ class _PostReportScreenState extends State<PostReportScreen> {
   void initState() {
     super.initState();
     _selectedType = widget.initialType;
+    _selectedCampus = widget.initialCampus;
+    _currentNavIndex = widget.initialType == ReportType.found ? 2 : 1;
 
     // Listener untuk menghapus error seketika pengguna mengetik
     _nameController.addListener(() {
@@ -122,8 +149,43 @@ class _PostReportScreenState extends State<PostReportScreen> {
     });
 
     _locationController.addListener(() {
-      if (_locationError != null && _locationController.text.trim().isNotEmpty) {
+      final text = _locationController.text;
+      if (_locationError != null && text.trim().isNotEmpty) {
         setState(() => _locationError = null);
+      }
+
+      // Smart Autocomplete & Kampus Auto-Scanner
+      if (_locationFocusNode.hasFocus && text.trim().isNotEmpty) {
+        final matches = searchCampusLocations(text);
+        final detected = detectCampusFromText(text, fallbackCampus: _selectedCampus);
+        setState(() {
+          _locationSuggestions = matches;
+          _showLocationSuggestions = matches.isNotEmpty;
+          _selectedCampus = detected;
+        });
+      } else if (text.trim().isEmpty) {
+        setState(() {
+          _locationSuggestions = [];
+          _showLocationSuggestions = false;
+        });
+      }
+    });
+
+    _locationFocusNode.addListener(() {
+      if (!_locationFocusNode.hasFocus) {
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) {
+            setState(() => _showLocationSuggestions = false);
+          }
+        });
+      } else if (_locationController.text.trim().isNotEmpty) {
+        final matches = searchCampusLocations(_locationController.text);
+        if (matches.isNotEmpty) {
+          setState(() {
+            _locationSuggestions = matches;
+            _showLocationSuggestions = true;
+          });
+        }
       }
     });
 
@@ -144,12 +206,15 @@ class _PostReportScreenState extends State<PostReportScreen> {
       if (_storageLocationError != null &&
           _storageLocationController.text.trim().isNotEmpty) {
         setState(() => _storageLocationError = null);
+      } else {
+        setState(() {});
       }
     });
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
     _locationController.dispose();
@@ -336,25 +401,233 @@ class _PostReportScreenState extends State<PostReportScreen> {
   }
 
   // ===========================================================================
-  // INTERAKSI: DATE PICKER FORMAT BAHASA INDONESIA
+  // INTERAKSI: APPLE-STYLE BOTTOM SHEET DATE PICKER
+  // Menggantikan Dialog Material 3 kaku dengan Apple Modal Sheet elegan
   // ===========================================================================
   Future<void> _selectDate() async {
     final now = DateTime.now();
-    final pickedDate = await showDatePicker(
+    DateTime tempSelected = now;
+
+    final pickedDate = await showModalBottomSheet<DateTime>(
       context: context,
-      initialDate: now,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 2),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.teal600,
-              onPrimary: Colors.white,
-              onSurface: AppColors.green950,
-            ),
-          ),
-          child: child!,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        DateTime selected = tempSelected;
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x1F12312E),
+                    offset: Offset(0, -6),
+                    blurRadius: 28,
+                  ),
+                ],
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                14,
+                20,
+                MediaQuery.of(sheetContext).padding.bottom + 18,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. Apple Pill Drag Handle
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4.5,
+                      decoration: BoxDecoration(
+                        color: AppColors.sage100,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 2. Header: Title + Subtitle + Close Button
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(9),
+                        decoration: BoxDecoration(
+                          color: AppColors.teal600.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.calendar_month_rounded,
+                          color: AppColors.teal600,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Pilih Tanggal Kejadian',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.green950,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Kapan barang hilang atau ditemukan?',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: AppColors.slate600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: AppColors.sand100.withValues(alpha: 0.6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 17,
+                            color: AppColors.slate700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Divider(color: Color(0xFFF1F5F9), height: 1),
+                  const SizedBox(height: 6),
+
+                  // 3. Apple-styled Calendar Date Picker
+                  Theme(
+                    data: Theme.of(sheetContext).copyWith(
+                      colorScheme: const ColorScheme.light(
+                        primary: AppColors.teal600,
+                        onPrimary: Colors.white,
+                        surface: Colors.white,
+                        onSurface: AppColors.green950,
+                      ),
+                      datePickerTheme: DatePickerThemeData(
+                        weekdayStyle: GoogleFonts.plusJakartaSans(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.teal600,
+                        ),
+                        dayStyle: GoogleFonts.plusJakartaSans(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.green950,
+                        ),
+                        yearStyle: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.green950,
+                        ),
+                        todayForegroundColor:
+                            WidgetStateProperty.all(AppColors.teal600),
+                        todayBackgroundColor: WidgetStateProperty.all(
+                          AppColors.teal600.withValues(alpha: 0.10),
+                        ),
+                        todayBorder: const BorderSide(
+                          color: AppColors.teal600,
+                          width: 1.5,
+                        ),
+                        dayBackgroundColor:
+                            WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return AppColors.teal600;
+                          }
+                          return Colors.transparent;
+                        }),
+                        dayForegroundColor:
+                            WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return Colors.white;
+                          }
+                          return AppColors.green950;
+                        }),
+                      ),
+                    ),
+                    child: CalendarDatePicker(
+                      initialDate: selected,
+                      firstDate: DateTime(now.year - 1),
+                      lastDate: DateTime(now.year + 2),
+                      onDateChanged: (newDate) {
+                        setSheetState(() {
+                          selected = newDate;
+                        });
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // 4. Action Buttons (Apple Pill Style)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.slate700,
+                            side: const BorderSide(color: AppColors.sage100),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                          ),
+                          child: Text(
+                            'Batal',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton(
+                          onPressed: () => Navigator.pop(ctx, selected),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.teal600,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                          ),
+                          child: Text(
+                            'Pilih Tanggal Ini',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -379,6 +652,77 @@ class _PostReportScreenState extends State<PostReportScreen> {
       setState(() {
         _dateController.text = formattedDate;
         _dateError = null;
+      });
+    }
+  }
+
+  // ===========================================================================
+  // INTERAKSI: TIME PICKER CUSTOM JAM (KHUSUS BARANG DITEMUKAN)
+  // ===========================================================================
+  Future<void> _selectCustomTime() async {
+    final nowTime = TimeOfDay.now();
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: nowTime,
+      helpText: 'PILIH JAM PENEMUAN',
+      cancelText: 'Batal',
+      confirmText: 'Pilih Jam',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.teal600,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: AppColors.green950,
+            ),
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+                side: BorderSide(
+                  color: AppColors.teal600.withValues(alpha: 0.12),
+                  width: 1.5,
+                ),
+              ),
+              hourMinuteColor: AppColors.teal600.withValues(alpha: 0.10),
+              hourMinuteTextColor: AppColors.teal600,
+              dayPeriodColor: AppColors.teal600.withValues(alpha: 0.12),
+              dayPeriodTextColor: AppColors.teal600,
+              dialHandColor: AppColors.teal600,
+              dialBackgroundColor: const Color(0xFFF6FAF8),
+              dialTextColor: AppColors.green950,
+              entryModeIconColor: AppColors.teal600,
+              cancelButtonStyle: TextButton.styleFrom(
+                foregroundColor: AppColors.slate600,
+                textStyle: GoogleFonts.plusJakartaSans(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              confirmButtonStyle: FilledButton.styleFrom(
+                backgroundColor: AppColors.teal600,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: GoogleFonts.plusJakartaSans(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedTime != null) {
+      final hour = pickedTime.hour.toString().padLeft(2, '0');
+      final minute = pickedTime.minute.toString().padLeft(2, '0');
+      setState(() {
+        _selectedTimeSession = 'Pukul $hour.$minute WIB';
       });
     }
   }
@@ -459,7 +803,9 @@ class _PostReportScreenState extends State<PostReportScreen> {
         'category': _categories[_selectedCategoryIndex],
         'phone': _phoneController.text.trim(),
         'location': _locationController.text.trim(),
+        'campus': _selectedCampus,
         'date': _dateController.text.trim(),
+        'timeSession': _selectedTimeSession,
         'description': _descriptionController.text.trim(),
         'type': _selectedType,
         'storageType': _selectedType == ReportType.found
@@ -486,178 +832,228 @@ class _PostReportScreenState extends State<PostReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: AppColors.bgCanvas,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Scrollable Form Area
-          SafeArea(
-            bottom: false,
-            child: ScrollConfiguration(
-              behavior: const ScrollBehavior().copyWith(scrollbars: false),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.screenInset,
-                ),
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
+          // 1. Scrollable Form Area (Diisolasi dengan RepaintBoundary untuk 60/120 FPS mulus)
+          RepaintBoundary(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                AppDimens.screenInset,
+                topPadding + 20, // Jarak padding atas yang lega untuk Buat Laporan
+                AppDimens.screenInset,
+                0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. Title & Back Button
+                  _buildHeaderTitle(),
 
-                    // 1. Title & Teal Underline Bar
-                    _buildHeaderTitle(),
+                  const SizedBox(height: 22),
 
-                    const SizedBox(height: 22),
+                  // 2. Toggle Tab: Barang Hilang vs Barang Ditemukan (Asli Punya Teman)
+                  _buildReportTypeToggle(),
 
-                    // 2. Toggle Tab: Barang Hilang vs Barang Ditemukan
-                    _buildReportTypeToggle(),
+                  const SizedBox(height: 20),
 
-                    const SizedBox(height: 20),
+                  // 3. Upload Foto Box (Dotted / Dashed Border)
+                  _buildUploadPhotoBox(),
 
-                    // 3. Upload Foto Box (Dotted / Dashed Border)
-                    _buildUploadPhotoBox(),
+                  const SizedBox(height: 20),
 
-                    const SizedBox(height: 20),
+                  // 4. Form Field: Nama / Judul barang
+                  _buildInputField(
+                    label: 'Nama barang',
+                    controller: _nameController,
+                    focusNode: _nameFocusNode,
+                    hintText: _selectedType == ReportType.lost
+                        ? 'Dompet kulit hitam'
+                        : 'Kunci Motor Honda Vario Hitam',
+                    errorText: _nameError,
+                  ),
 
-                    // 4. Form Field: Nama / Judul barang
-                    _buildInputField(
-                      label: 'Nama barang',
-                      controller: _nameController,
-                      focusNode: _nameFocusNode,
-                      hintText: _selectedType == ReportType.lost
-                          ? 'Dompet kulit hitam'
-                          : 'Kunci Motor Honda Vario Hitam',
-                      errorText: _nameError,
+                  const SizedBox(height: 16),
+
+                  // 5. Form Field: Kategori Chips
+                  _buildCategoryChips(),
+
+                  const SizedBox(height: 16),
+
+                  // 6. Form Field: Nomor Telepon / WhatsApp
+                  _buildInputField(
+                    label: 'Nomor Telepon / WhatsApp',
+                    controller: _phoneController,
+                    focusNode: _phoneFocusNode,
+                    hintText: 'Contoh: 081234567890',
+                    errorText: _phoneError,
+                    keyboardType: TextInputType.phone,
+                    prefixIcon: const Icon(
+                      Icons.phone_outlined,
+                      color: AppColors.slate600,
+                      size: 20,
                     ),
+                    helperText:
+                        'Digunakan civitas akademika untuk menghubungi Anda via WhatsApp.',
+                  ),
 
-                    const SizedBox(height: 16),
+                  // 7. Form Khusus "Barang Ditemukan": Status Penitipan Barang
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    reverseDuration: const Duration(milliseconds: 180),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      return SizeTransition(
+                        sizeFactor: animation,
+                        alignment: Alignment.topCenter,
+                        child: FadeTransition(
+                          opacity: animation,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _selectedType == ReportType.found
+                        ? KeyedSubtree(
+                            key: const ValueKey('found_storage_section'),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 18),
+                                _buildStorageTypeSection(),
+                                const SizedBox(height: 14),
 
-                    // 5. Form Field: Kategori Chips
-                    _buildCategoryChips(),
+                                // Jika dititipkan di Pos Satpam atau Loket/Posko
+                                if (_selectedStorageType != 'student') ...[
+                                  _buildStorageLocationDetails(),
+                                ] else ...[
+                                  // Jika dipegang sendiri oleh penemu
+                                  _buildSelfKeptNotice(),
+                                ],
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(key: ValueKey('empty_storage')),
+                  ),
 
-                    const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                    // 6. Form Field: Nomor Telepon / WhatsApp
-                    _buildInputField(
-                      label: 'Nomor Telepon / WhatsApp',
-                      controller: _phoneController,
-                      focusNode: _phoneFocusNode,
-                      hintText: 'Contoh: 081234567890',
-                      errorText: _phoneError,
-                      keyboardType: TextInputType.phone,
-                      prefixIcon: const Icon(
-                        Icons.phone_outlined,
-                        color: AppColors.slate600,
-                        size: 20,
-                      ),
-                      helperText:
-                          'Digunakan civitas akademika untuk menghubungi Anda via WhatsApp.',
+                  // 8. Form Field: Lokasi Kejadian dengan Smart Autocomplete & Kampus Tagging
+                  _buildLocationSectionWithSuggestions(),
+
+                  const SizedBox(height: 16),
+
+                  // 9. Form Field: Hari/Tanggal (Apple Modal Bottom Sheet Date Picker)
+                  _buildInputField(
+                    label: 'Hari/Tanggal',
+                    controller: _dateController,
+                    focusNode: _dateFocusNode,
+                    hintText: _selectedType == ReportType.lost
+                        ? '26 Oktober 2026'
+                        : '20 Oktober 2026',
+                    errorText: _dateError,
+                    readOnly: true,
+                    onTap: _selectDate,
+                    suffixIcon: const Icon(
+                      Icons.calendar_month_outlined,
+                      color: AppColors.slate600,
+                      size: 20,
                     ),
+                  ),
 
-                    // 7. Form Khusus "Barang Ditemukan": Status Penitipan Barang
-                    if (_selectedType == ReportType.found) ...[
-                      const SizedBox(height: 18),
-                      _buildStorageTypeSection(),
-                      const SizedBox(height: 14),
+                  // 9b. Khusus Barang Ditemukan: Perkiraan Sesi/Jam Penemuan (Opsional)
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    reverseDuration: const Duration(milliseconds: 180),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      return SizeTransition(
+                        sizeFactor: animation,
+                        alignment: Alignment.topCenter,
+                        child: FadeTransition(
+                          opacity: animation,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _selectedType == ReportType.found
+                        ? KeyedSubtree(
+                            key: const ValueKey('found_time_session'),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 14),
+                                _buildTimeSessionSection(),
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(key: ValueKey('empty_time')),
+                  ),
 
-                      // Jika dititipkan di Pos Satpam atau Loket/Posko
-                      if (_selectedStorageType != 'student') ...[
-                        _buildStorageLocationDetails(),
-                      ] else ...[
-                        // Jika dipegang sendiri oleh penemu
-                        _buildSelfKeptNotice(),
-                      ],
-                    ],
+                  const SizedBox(height: 16),
 
-                    const SizedBox(height: 16),
+                  // 10. Form Field: Deskripsi
+                  _buildInputField(
+                    label: 'Deskripsi',
+                    controller: _descriptionController,
+                    focusNode: _descriptionFocusNode,
+                    hintText:
+                        'Warna, Ukuran, ciri rahasia/identitas khusus...',
+                    errorText: _descriptionError,
+                    maxLines: 3,
+                  ),
 
-                    // 8. Form Field: Lokasi Kejadian (Tempat Hilang / Ditemukan)
-                    _buildInputField(
-                      label: _selectedType == ReportType.lost
-                          ? 'Lokasi Terakhir Terlihat'
-                          : 'Lokasi Penemuan',
-                      controller: _locationController,
-                      focusNode: _locationFocusNode,
-                      hintText: _selectedType == ReportType.lost
-                          ? 'Gedung Perkuliahan, Lt. 2'
-                          : 'Gazebo Depan Gedung E1 FT Ketintang',
-                      errorText: _locationError,
-                    ),
+                  const SizedBox(height: 24),
 
-                    const SizedBox(height: 16),
+                  // 11. Tombol Publish
+                  _buildPublishButton(),
 
-                    // 9. Form Field: Hari/Tanggal
-                    _buildInputField(
-                      label: 'Hari/Tanggal',
-                      controller: _dateController,
-                      focusNode: _dateFocusNode,
-                      hintText: _selectedType == ReportType.lost
-                          ? '26 Oktober 2026'
-                          : '20 Oktober 2026',
-                      errorText: _dateError,
-                      readOnly: true,
-                      onTap: _selectDate,
-                      suffixIcon: const Icon(
-                        Icons.calendar_month_outlined,
-                        color: AppColors.slate600,
-                        size: 20,
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // 10. Form Field: Deskripsi
-                    _buildInputField(
-                      label: 'Deskripsi',
-                      controller: _descriptionController,
-                      focusNode: _descriptionFocusNode,
-                      hintText: 'Warna, Ukuran, ciri rahasia/identitas khusus...',
-                      errorText: _descriptionError,
-                      maxLines: 3,
-                    ),
-
-                    const SizedBox(height: 26),
-
-                    // 11. Tombol Publish
-                    _buildPublishButton(),
-
-                    // Jarak bottom spacer agar tidak tertutup floating navbar
-                    const SizedBox(height: 120),
-                  ],
-                ),
+                  // Jarak bottom spacer proporsional agar tombol pas berada di atas floating navbar saat di-scroll mentok
+                  const SizedBox(height: 104),
+                ],
               ),
             ),
           ),
 
-          // Floating Glassy Bottom Navigation Bar
+          // 2. Floating Glassy Bottom Navigation Bar
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: FloatingBottomNav(
-              currentIndex: _currentNavIndex,
-              onTabSelected: (index) {
-                if (index == 0) {
-                  Navigator.popUntil(context, (route) => route.isFirst);
-                } else if (index == 1) {
-                  Navigator.pushReplacement(
-                    context,
-                    SmoothPageRoute(child: const SearchScreen()),
-                  );
-                } else if (index == 2) {
-                  Navigator.pushReplacement(
-                    context,
-                    SmoothPageRoute(child: const FoundScreen()),
-                  );
-                } else {
-                  setState(() => _currentNavIndex = index);
-                }
-              },
-              onPostTap: () {
-                // Sudah berada di layar Buat Laporan
-              },
+            child: RepaintBoundary(
+              child: FloatingBottomNav(
+                currentIndex: _currentNavIndex,
+                onTabSelected: (index) {
+                  if (index == 0) {
+                    Navigator.popUntil(context, (route) => route.isFirst);
+                  } else if (index == 1) {
+                    Navigator.pushReplacement(
+                      context,
+                      SmoothPageRoute(child: const SearchScreen()),
+                    );
+                  } else if (index == 2) {
+                    Navigator.pushReplacement(
+                      context,
+                      SmoothPageRoute(child: const FoundScreen()),
+                    );
+                  } else {
+                    setState(() => _currentNavIndex = index);
+                  }
+                },
+                onPostTap: () {
+                  // Sudah berada di layar Buat Laporan
+                },
+              ),
             ),
           ),
         ],
@@ -666,28 +1062,53 @@ class _PostReportScreenState extends State<PostReportScreen> {
   }
 
   // ===========================================================================
-  // WIDGET BUILDER: HEADER TITLE & TEAL UNDERLINE
+  // WIDGET BUILDER: HEADER TITLE & BACK BUTTON
   // ===========================================================================
   Widget _buildHeaderTitle() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Buat laporan',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: AppColors.green950,
-            letterSpacing: -0.3,
-          ),
+        Row(
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF12312E).withValues(alpha: 0.06),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 16,
+                  color: AppColors.green950,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Text(
+              'Buat laporan',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: AppColors.green950,
+                letterSpacing: -0.4,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 6),
-        Container(
-          width: 124,
-          height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.teal600,
-            borderRadius: BorderRadius.circular(2),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 52),
+          child: Container(
+            width: 124,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.teal600,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
         ),
       ],
@@ -696,6 +1117,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
 
   // ===========================================================================
   // WIDGET BUILDER: TOGGLE TAB (BARANG HILANG vs BARANG DITEMUKAN)
+  // Dikembalikan persis seperti layout dan style asli buatan teman
   // ===========================================================================
   Widget _buildReportTypeToggle() {
     final isLostActive = _selectedType == ReportType.lost;
@@ -714,6 +1136,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
                 if (_selectedType != ReportType.lost) {
                   setState(() {
                     _selectedType = ReportType.lost;
+                    _currentNavIndex = 1;
                   });
                 }
               },
@@ -755,6 +1178,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
                 if (_selectedType != ReportType.found) {
                   setState(() {
                     _selectedType = ReportType.found;
+                    _currentNavIndex = 2;
                   });
                 }
               },
@@ -1032,6 +1456,184 @@ class _PostReportScreenState extends State<PostReportScreen> {
   }
 
   // ===========================================================================
+  // WIDGET BUILDER: SESI / WAKTU PENEMUAN (KHUSUS BARANG DITEMUKAN)
+  // ===========================================================================
+  Widget _buildTimeSessionSection() {
+    final sessions = [
+      {'id': 'pagi', 'label': 'Pagi (07.00 - 11.00)', 'icon': Icons.wb_sunny_outlined},
+      {'id': 'siang', 'label': 'Siang (11.00 - 15.00)', 'icon': Icons.wb_cloudy_outlined},
+      {'id': 'sore', 'label': 'Sore (15.00 - 18.00)', 'icon': Icons.wb_twilight_rounded},
+      {'id': 'malam', 'label': 'Malam (> 18.00)', 'icon': Icons.nightlight_outlined},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Perkiraan Waktu Penemuan',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.green950,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5F2),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Opsional',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.teal600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Pilih rentang waktu saat Anda menemukan barang ini:',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11.5,
+            color: AppColors.slate700,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: [
+              ...sessions.map((sess) {
+                final isSelected = _selectedTimeSession == sess['label'];
+                final icon = sess['icon'] as IconData;
+                final label = sess['label'] as String;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isSelected) {
+                          _selectedTimeSession = null;
+                        } else {
+                          _selectedTimeSession = label;
+                        }
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOutCubic,
+                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8.5),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.teal600
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(99),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.teal600
+                              : const Color(0xFFDEE8E2),
+                          width: 1.2,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.teal600.withValues(alpha: 0.25),
+                                  offset: const Offset(0, 3),
+                                  blurRadius: 6,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            icon,
+                            size: 15,
+                            color: isSelected ? Colors.white : AppColors.teal600,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            label,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                              color: isSelected ? Colors.white : AppColors.green950,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              // Tombol Pilih Jam Khusus
+              GestureDetector(
+                onTap: _selectCustomTime,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8.5),
+                  decoration: BoxDecoration(
+                    color: (_selectedTimeSession != null &&
+                            _selectedTimeSession!.startsWith('Pukul'))
+                        ? AppColors.teal600
+                        : const Color(0xFFF4F8F6),
+                    borderRadius: BorderRadius.circular(99),
+                    border: Border.all(
+                      color: (_selectedTimeSession != null &&
+                              _selectedTimeSession!.startsWith('Pukul'))
+                          ? AppColors.teal600
+                          : const Color(0xFFDEE8E2),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 15,
+                        color: (_selectedTimeSession != null &&
+                                _selectedTimeSession!.startsWith('Pukul'))
+                            ? Colors.white
+                            : AppColors.teal600,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        (_selectedTimeSession != null &&
+                                _selectedTimeSession!.startsWith('Pukul'))
+                            ? _selectedTimeSession!
+                            : 'Pilih Jam...',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: (_selectedTimeSession != null &&
+                                  _selectedTimeSession!.startsWith('Pukul'))
+                              ? Colors.white
+                              : AppColors.green950,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ===========================================================================
   // WIDGET BUILDER: DETAIL TEMPAT PENITIPAN & LINK GOOGLE MAPS OPSIONAL
   // ===========================================================================
   Widget _buildStorageLocationDetails() {
@@ -1082,6 +1684,99 @@ class _PostReportScreenState extends State<PostReportScreen> {
                 : 'Misal: Meja Layanan Perpustakaan Lt. 1',
             errorText: _storageLocationError,
           ),
+
+          // Pilihan Cepat Pos Satpam Kampus UNESA (Apple-style Quick Chips)
+          if (isSatpam) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Rekomendasi Pos Satpam UNESA:',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.slate700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: _unesaSatpamPresets.map((preset) {
+                  final isSelected =
+                      _storageLocationController.text.trim() == preset;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _storageLocationController.text = preset;
+                          _storageLocationError = null;
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutCubic,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.teal600
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(99),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.teal600
+                                : const Color(0xFFDEE8E2),
+                            width: 1,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.teal600
+                                        .withValues(alpha: 0.22),
+                                    offset: const Offset(0, 2),
+                                    blurRadius: 4,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isSelected
+                                  ? Icons.check_circle_rounded
+                                  : Icons.shield_outlined,
+                              size: 13,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppColors.teal600,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              preset,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11.5,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppColors.green950,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
 
           const SizedBox(height: 12),
 
@@ -1166,6 +1861,328 @@ class _PostReportScreenState extends State<PostReportScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ===========================================================================
+  // WIDGET BUILDER: LOKASI DENGAN SMART AUTOCOMPLETE & TAGGING KAMPUS
+  // ===========================================================================
+  Widget _buildLocationSectionWithSuggestions() {
+    final label = _selectedType == ReportType.lost
+        ? 'Lokasi Terakhir Terlihat'
+        : 'Lokasi Penemuan';
+    final isKetintang = _selectedCampus == 'Ketintang';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.green950,
+              ),
+            ),
+            // Pill Kampus Terdeteksi (Bisa ditap untuk beralih manual Ketintang/Lidah)
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedCampus = isKetintang ? 'Lidah Wetan' : 'Ketintang';
+                });
+                AppToast.info(
+                  context,
+                  title: 'Kampus Dipilih',
+                  message: 'Laporan diarahkan ke UNESA $_selectedCampus.',
+                );
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isKetintang
+                      ? const Color(0xFFE8F5F2)
+                      : const Color(0xFFFFF1EB),
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(
+                    color: isKetintang
+                        ? AppColors.teal600.withValues(alpha: 0.35)
+                        : AppColors.coral500.withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.apartment_rounded,
+                      size: 13,
+                      color: isKetintang
+                          ? AppColors.teal600
+                          : AppColors.coral500,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'UNESA $_selectedCampus',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isKetintang
+                            ? AppColors.teal600
+                            : AppColors.coral500,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.swap_horiz_rounded,
+                      size: 13,
+                      color: isKetintang
+                          ? AppColors.teal600
+                          : AppColors.coral500,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Ketik nama gedung/tempat, atau pilih dari rekomendasi:',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11.5,
+            color: AppColors.slate700,
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Input Field Lokasi
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _locationError != null
+                  ? AppColors.coral500
+                  : (_locationFocusNode.hasFocus
+                      ? AppColors.teal600
+                      : const Color(0xFFDEE8E2)),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF12312E).withValues(alpha: 0.04),
+                offset: const Offset(0, 2),
+                blurRadius: 8,
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: _locationController,
+            focusNode: _locationFocusNode,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.green950,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: InputBorder.none,
+              hintText: _selectedType == ReportType.lost
+                  ? 'Contoh: Gedung E1 FT, Kantin, atau Lab Komputer'
+                  : 'Contoh: Gazebo Depan Gedung E1 FT Ketintang',
+              hintStyle: GoogleFonts.plusJakartaSans(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                color: AppColors.slate600,
+              ),
+              prefixIcon: const Icon(
+                Icons.location_on_outlined,
+                color: AppColors.teal600,
+                size: 20,
+              ),
+              suffixIcon: _locationController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 16),
+                      onPressed: () {
+                        setState(() {
+                          _locationController.clear();
+                          _locationSuggestions = [];
+                          _showLocationSuggestions = false;
+                        });
+                      },
+                    )
+                  : null,
+            ),
+          ),
+        ),
+
+        // Error text jika kosong
+        if (_locationError != null) ...[
+          const SizedBox(height: 5),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              _locationError!,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.coral500,
+              ),
+            ),
+          ),
+        ],
+
+        // Suggestions Dropdown Card
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: _showLocationSuggestions && _locationSuggestions.isNotEmpty
+              ? Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.teal600.withValues(alpha: 0.25),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF17695D).withValues(alpha: 0.10),
+                        offset: const Offset(0, 6),
+                        blurRadius: 18,
+                        spreadRadius: -2,
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.auto_awesome_rounded,
+                                size: 13,
+                                color: AppColors.teal600,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Rekomendasi Area Kampus UNESA',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.teal600,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 1, color: Color(0xFFEEF2F0)),
+                        ..._locationSuggestions.take(4).map((loc) {
+                          final isKet = loc.campus == 'Ketintang';
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _locationController.text = loc.name;
+                                  _selectedCampus = loc.campus;
+                                  _showLocationSuggestions = false;
+                                  _locationError = null;
+                                });
+                                _locationFocusNode.unfocus();
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(7),
+                                      decoration: BoxDecoration(
+                                        color: isKet
+                                            ? const Color(0xFFE8F5F2)
+                                            : const Color(0xFFFFF1EB),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.place_rounded,
+                                        size: 15,
+                                        color: isKet
+                                            ? AppColors.teal600
+                                            : AppColors.coral500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            loc.name,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.green950,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${loc.area} • UNESA ${loc.campus}',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 11,
+                                              color: AppColors.slate600,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                      decoration: BoxDecoration(
+                                        color: isKet
+                                            ? const Color(0xFFE8F5F2)
+                                            : const Color(0xFFFFF1EB),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        loc.campus,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: isKet
+                                              ? AppColors.teal600
+                                              : AppColors.coral500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 

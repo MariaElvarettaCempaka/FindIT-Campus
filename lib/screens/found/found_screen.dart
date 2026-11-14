@@ -900,6 +900,29 @@ class _FoundScreenState extends State<FoundScreen> {
                                     ),
                                   ],
                                 ),
+                                if (item['timeSession'] != null) ...[
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.schedule_rounded,
+                                        size: 15,
+                                        color: Color(0xFF17695D),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          'Waktu Penemuan: ${item['timeSession']}',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                                 if (storageType != 'student') ...[
                                   const SizedBox(height: 6),
                                   Row(
@@ -1171,10 +1194,16 @@ class _FoundScreenState extends State<FoundScreen> {
                 }
               },
               onPostTap: () {
+                final activeCampus = _currentCampusLocation.toLowerCase().contains('lidah')
+                    ? 'Lidah Wetan'
+                    : 'Ketintang';
                 Navigator.push<Map<String, dynamic>>(
                   context,
                   SmoothPageRoute(
-                    child: const PostReportScreen(initialType: ReportType.found),
+                    child: PostReportScreen(
+                      initialType: ReportType.found,
+                      initialCampus: activeCampus,
+                    ),
                   ),
                 ).then((newReport) {
                   if (newReport != null && mounted) {
@@ -1198,9 +1227,12 @@ class _FoundScreenState extends State<FoundScreen> {
                         'title': newReport['title'],
                         'category': newReport['category'],
                         'location': newReport['location'],
-                        'campus': 'Ketintang',
-                        'timeAgo': 'Baru saja',
+                        'campus': newReport['campus'] ?? activeCampus,
+                        'timeAgo': newReport['timeSession'] != null
+                            ? 'Baru saja (${newReport['timeSession']})'
+                            : 'Baru saja',
                         'date': newReport['date'],
+                        'timeSession': newReport['timeSession'],
                         'storageType': storageType,
                         'storageLabel': storageLabel,
                         'storageDesc': storageType == 'satpam'

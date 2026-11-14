@@ -6,6 +6,7 @@ import '../../widgets/item_card.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/app_toast_stack.dart';
 import '../found/found_screen.dart';
+import '../post/post_report_screen.dart';
 
 /// Halaman Pencarian Interaktif (Figma Node 181:2536, 181:2559, & 181:2664).
 /// Menggabungkan 3 state visual dinamis:
@@ -238,11 +239,29 @@ class _SearchScreenState extends State<SearchScreen> {
                 }
               },
               onPostTap: () {
-                AppToast.info(
+                Navigator.push<Map<String, dynamic>>(
                   context,
-                  title: 'Formulir Laporan',
-                  message: 'Buka form pembuatan laporan baru.',
-                );
+                  SmoothPageRoute(
+                    child: const PostReportScreen(initialType: ReportType.lost),
+                  ),
+                ).then((newReport) {
+                  if (newReport != null && mounted) {
+                    setState(() {
+                      _allItems.insert(0, {
+                        'title': newReport['title'] ?? 'Laporan Baru',
+                        'location': newReport['location'] ?? 'Kampus UNESA',
+                        'date': newReport['date'] ?? 'Hari ini',
+                        'category': newReport['category'] ?? 'Lainnya',
+                        'timeAgo': 'Baru saja',
+                        'status': newReport['type'] == ReportType.lost
+                            ? ReportStatus.lost
+                            : ReportStatus.found,
+                        'imageAsset': newReport['image'] ?? 'assets/images/dompet_kulit.jpg',
+                        'description': newReport['description'] ?? '',
+                      });
+                    });
+                  }
+                });
               },
             ),
           ),

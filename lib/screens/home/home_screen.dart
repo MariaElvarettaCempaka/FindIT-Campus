@@ -184,10 +184,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _navigateToCreateReport([ReportType initialType = ReportType.lost]) async {
+    final activeCampus = _currentLocation.toLowerCase().contains('lidah')
+        ? 'Lidah Wetan'
+        : 'Ketintang';
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
       SmoothPageRoute(
-        child: PostReportScreen(initialType: initialType),
+        child: PostReportScreen(
+          initialType: initialType,
+          initialCampus: activeCampus,
+        ),
       ),
     );
 
