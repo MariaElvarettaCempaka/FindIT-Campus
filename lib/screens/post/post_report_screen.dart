@@ -12,6 +12,7 @@ import '../../widgets/app_toast_stack.dart';
 import '../../widgets/floating_bottom_nav.dart';
 import '../found/found_screen.dart';
 import '../search/search_screen.dart';
+import '../profile/profile_screen.dart';
 
 /// Enum tipe laporan: Barang Hilang atau Barang Ditemukan
 enum ReportType {
@@ -1045,6 +1046,11 @@ class _PostReportScreenState extends State<PostReportScreen> {
                     Navigator.pushReplacement(
                       context,
                       SmoothPageRoute(child: const FoundScreen()),
+                    );
+                  } else if (index == 3) {
+                    Navigator.pushReplacement(
+                      context,
+                      SmoothPageRoute(child: const ProfileScreen()),
                     );
                   } else {
                     setState(() => _currentNavIndex = index);

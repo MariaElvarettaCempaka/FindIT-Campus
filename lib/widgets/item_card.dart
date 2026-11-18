@@ -11,6 +11,7 @@ class ItemCard extends StatefulWidget {
   final String timeAgo;
   final ReportStatus status;
   final String? imageAsset;
+  final String? imageUrl;
   final IconData? icon;
   final String? snippet;
   final VoidCallback? onTap;
@@ -22,6 +23,7 @@ class ItemCard extends StatefulWidget {
     required this.timeAgo,
     required this.status,
     this.imageAsset,
+    this.imageUrl,
     this.icon,
     this.snippet,
     this.onTap,
@@ -94,9 +96,9 @@ class _ItemCardState extends State<ItemCard> {
                       width: 76,
                       height: 76,
                       color: tileBg,
-                      child: widget.imageAsset != null
-                          ? Image.asset(
-                              widget.imageAsset!,
+                      child: widget.imageUrl != null && widget.imageUrl!.isNotEmpty
+                          ? Image.network(
+                              widget.imageUrl!,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 return Icon(
@@ -106,11 +108,23 @@ class _ItemCardState extends State<ItemCard> {
                                 );
                               },
                             )
-                          : Icon(
-                              widget.icon ?? Icons.inventory_2_outlined,
-                              size: 30,
-                              color: iconColor,
-                            ),
+                          : (widget.imageAsset != null
+                              ? Image.asset(
+                                  widget.imageAsset!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.inventory_2_outlined,
+                                      color: iconColor,
+                                      size: 30,
+                                    );
+                                  },
+                                )
+                              : Icon(
+                                  widget.icon ?? Icons.inventory_2_outlined,
+                                  size: 30,
+                                  color: iconColor,
+                                )),
                     ),
                   ),
                   const SizedBox(width: 14),

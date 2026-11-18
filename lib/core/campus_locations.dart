@@ -1,11 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Master Data Lokasi & Hotspot Kampus UNESA (Ketintang & Lidah Wetan)
 /// Digunakan untuk Smart Autocomplete, Tagging Kampus, dan Filter Laporan.
+/// Sesuai ERD Collection: campus_locations
 class CampusLocation {
   final String id;
   final String name;
   final String campus; // 'Ketintang' atau 'Lidah Wetan'
   final String area;
   final List<String> keywords;
+  final double? latitude;
+  final double? longitude;
 
   const CampusLocation({
     required this.id,
@@ -13,7 +18,85 @@ class CampusLocation {
     required this.campus,
     required this.area,
     this.keywords = const [],
+    this.latitude,
+    this.longitude,
   });
+
+  /// Factory untuk mem-parsing DocumentSnapshot dari Firestore
+  factory CampusLocation.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return CampusLocation.fromMap(data, doc.id);
+  }
+
+  /// Factory dari Map standar
+  factory CampusLocation.fromMap(Map<String, dynamic> data, [String? docId]) {
+    final rawKeywords = data['keywords'];
+    List<String> parsedKeywords = [];
+    if (rawKeywords is List) {
+      parsedKeywords = rawKeywords.map((e) => e.toString()).toList();
+    }
+
+    return CampusLocation(
+      id: docId ?? data['id']?.toString() ?? '',
+      name: data['name']?.toString() ?? '',
+      campus: data['campus']?.toString() ?? 'Ketintang',
+      area: data['area']?.toString() ?? '',
+      keywords: parsedKeywords,
+      latitude: (data['latitude'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble() ??
+          (data['longtitude'] as num?)?.toDouble(),
+    );
+  }
+
+  /// Konversi ke Map untuk disimpan di Firestore
+  Map<String, dynamic> toFirestoreMap() {
+    return {
+      'name': name,
+      'campus': campus,
+      'area': area,
+      'keywords': keywords,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+    };
+  }
+}
+
+/// Service untuk mengelola Master Data Lokasi Kampus di Firestore
+class CampusLocationService {
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final CollectionReference _locationsRef =
+      _firestore.collection('campus_locations');
+
+  /// Stream daftar lokasi kampus dari Firestore dengan fallback ke master lokal
+  static Stream<List<CampusLocation>> getCampusLocationsStream({String? campus}) {
+    Query query = _locationsRef;
+    if (campus != null && campus.isNotEmpty) {
+      query = query.where('campus', isEqualTo: campus);
+    }
+
+    return query.snapshots().map((snapshot) {
+      if (snapshot.docs.isEmpty) {
+        // Fallback ke master data unesaCampusLocations jika Firestore masih kosong
+        if (campus != null && campus.isNotEmpty) {
+          return unesaCampusLocations
+              .where((loc) => loc.campus.toLowerCase() == campus.toLowerCase())
+              .toList();
+        }
+        return unesaCampusLocations;
+      }
+      return snapshot.docs.map((doc) => CampusLocation.fromFirestore(doc)).toList();
+    });
+  }
+
+  /// Helper untuk melakukan seeding master data ke Firestore (bisa dijalankan sekali oleh tim)
+  static Future<void> seedDefaultLocations() async {
+    final batch = _firestore.batch();
+    for (final loc in unesaCampusLocations) {
+      final docRef = _locationsRef.doc(loc.id);
+      batch.set(docRef, loc.toFirestoreMap(), SetOptions(merge: true));
+    }
+    await batch.commit();
+  }
 }
 
 /// Daftar Master Hotspot Kampus UNESA

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Item model lokasi kampus
 class CampusLocationItem {
@@ -21,8 +23,23 @@ class CampusLocationItem {
     required this.icon,
     required this.iconBg,
     required this.iconColor,
-    required this.activeReportsCount,
+    this.activeReportsCount = 0,
   });
+
+  CampusLocationItem copyWith({
+    int? activeReportsCount,
+  }) {
+    return CampusLocationItem(
+      id: id,
+      name: name,
+      zone: zone,
+      category: category,
+      icon: icon,
+      iconBg: iconBg,
+      iconColor: iconColor,
+      activeReportsCount: activeReportsCount ?? this.activeReportsCount,
+    );
+  }
 }
 
 /// Tampilkan Command Palette Modal (Mobile-First Apple Spotlight Style)
@@ -77,7 +94,7 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
   int? _hoveredIndex;
   bool _isLocatingGps = false;
 
-  // Database Lokasi & Hotspot Kampus
+  // Database Lokasi & Hotspot Kampus (default 0 laporan, disinkronkan real-time dari Firestore)
   final List<CampusLocationItem> _allLocations = const [
     CampusLocationItem(
       id: 'gps',
@@ -98,7 +115,7 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
       icon: Icons.menu_book_rounded,
       iconBg: Color(0xFFEBF3FF),
       iconColor: Color(0xFF2563EB),
-      activeReportsCount: 8,
+      activeReportsCount: 0,
     ),
     CampusLocationItem(
       id: 'kantin_pusat',
@@ -108,7 +125,7 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
       icon: Icons.restaurant_rounded,
       iconBg: Color(0xFFFFF1EB),
       iconColor: Color(0xFFE0533C),
-      activeReportsCount: 12,
+      activeReportsCount: 0,
     ),
     CampusLocationItem(
       id: 'gkb',
@@ -118,7 +135,7 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
       icon: Icons.school_rounded,
       iconBg: Color(0xFFF0EBF8),
       iconColor: Color(0xFF7C3AED),
-      activeReportsCount: 15,
+      activeReportsCount: 0,
     ),
     CampusLocationItem(
       id: 'gor_bima',
@@ -128,7 +145,7 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
       icon: Icons.fitness_center_rounded,
       iconBg: Color(0xFFFEF9C3),
       iconColor: Color(0xFFCA8A04),
-      activeReportsCount: 4,
+      activeReportsCount: 0,
     ),
     CampusLocationItem(
       id: 'masjid_kampus',
@@ -138,7 +155,7 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
       icon: Icons.mosque_rounded,
       iconBg: Color(0xFFE8F5E9),
       iconColor: Color(0xFF2E7D32),
-      activeReportsCount: 3,
+      activeReportsCount: 0,
     ),
     CampusLocationItem(
       id: 'parkir_utama',
@@ -148,7 +165,7 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
       icon: Icons.local_parking_rounded,
       iconBg: Color(0xFFF1F5F9),
       iconColor: Color(0xFF475569),
-      activeReportsCount: 6,
+      activeReportsCount: 0,
     ),
     // Pilihan Kampus Utama
     CampusLocationItem(
@@ -159,7 +176,7 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
       icon: Icons.apartment_rounded,
       iconBg: Color(0xFFE8F5F1),
       iconColor: Color(0xFF17695D),
-      activeReportsCount: 28,
+      activeReportsCount: 0,
     ),
     CampusLocationItem(
       id: 'unesa_lidah_wetan',
@@ -169,7 +186,7 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
       icon: Icons.apartment_rounded,
       iconBg: Color(0xFFE8F5F1),
       iconColor: Color(0xFF17695D),
-      activeReportsCount: 19,
+      activeReportsCount: 0,
     ),
     CampusLocationItem(
       id: 'unesa_magetan',
@@ -179,7 +196,7 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
       icon: Icons.apartment_rounded,
       iconBg: Color(0xFFE8F5F1),
       iconColor: Color(0xFF17695D),
-      activeReportsCount: 5,
+      activeReportsCount: 0,
     ),
     CampusLocationItem(
       id: 'ui_depok',
@@ -189,9 +206,12 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
       icon: Icons.location_on_rounded,
       iconBg: Color(0xFFFFECE5),
       iconColor: Color(0xFFE0533C),
-      activeReportsCount: 14,
+      activeReportsCount: 0,
     ),
   ];
+
+  StreamSubscription<QuerySnapshot>? _reportsSubscription;
+  Map<String, int> _dynamicCounts = {};
 
   @override
   void initState() {
@@ -201,18 +221,84 @@ class _LocationCommandPaletteState extends State<LocationCommandPalette> {
         _query = _searchCtrl.text.trim().toLowerCase();
       });
     });
+    _subscribeToReportsCount();
+  }
+
+  void _subscribeToReportsCount() {
+    try {
+      _reportsSubscription = FirebaseFirestore.instance
+          .collection('reports')
+          .snapshots()
+          .listen((snapshot) {
+        final Map<String, int> counts = {};
+
+        for (final doc in snapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>? ?? {};
+          final status = (data['status']?.toString() ?? '').toLowerCase();
+          // Hanya hitung laporan yang aktif (bukan selesai / resolved)
+          if (status == 'resolved' || status == 'selesai' || status == 'ditemukan_selesai') {
+            continue;
+          }
+
+          final campus = (data['campus']?.toString() ?? '').toLowerCase();
+          final locName = (data['location']?.toString() ?? '').toLowerCase();
+          final locId = (data['campusLocationId']?.toString() ?? '').toLowerCase();
+
+          // Hitung Kampus Utama
+          if (campus.contains('ketintang')) {
+            counts['unesa_ketintang'] = (counts['unesa_ketintang'] ?? 0) + 1;
+          } else if (campus.contains('lidah')) {
+            counts['unesa_lidah_wetan'] = (counts['unesa_lidah_wetan'] ?? 0) + 1;
+          } else if (campus.contains('magetan')) {
+            counts['unesa_magetan'] = (counts['unesa_magetan'] ?? 0) + 1;
+          }
+
+          // Hitung Hotspot Populer
+          if (locId.contains('perpus') || locName.contains('perpus')) {
+            counts['perpus_pusat'] = (counts['perpus_pusat'] ?? 0) + 1;
+          }
+          if (locId.contains('kantin') || locName.contains('kantin') || locName.contains('food court')) {
+            counts['kantin_pusat'] = (counts['kantin_pusat'] ?? 0) + 1;
+          }
+          if (locId.contains('gkb') || locName.contains('gkb') || locName.contains('kuliah bersama')) {
+            counts['gkb'] = (counts['gkb'] ?? 0) + 1;
+          }
+          if (locId.contains('gor') || locName.contains('gor') || locName.contains('bima')) {
+            counts['gor_bima'] = (counts['gor_bima'] ?? 0) + 1;
+          }
+          if (locId.contains('masjid') || locName.contains('masjid') || locName.contains('baitul makmur')) {
+            counts['masjid_kampus'] = (counts['masjid_kampus'] ?? 0) + 1;
+          }
+          if (locId.contains('parkir') || locName.contains('parkir')) {
+            counts['parkir_utama'] = (counts['parkir_utama'] ?? 0) + 1;
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _dynamicCounts = counts;
+          });
+        }
+      });
+    } catch (_) {}
   }
 
   @override
   void dispose() {
+    _reportsSubscription?.cancel();
     _searchCtrl.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
   List<CampusLocationItem> get _filteredLocations {
-    if (_query.isEmpty) return _allLocations;
-    return _allLocations.where((loc) {
+    final list = _allLocations.map((loc) {
+      final realCount = _dynamicCounts[loc.id] ?? 0;
+      return loc.copyWith(activeReportsCount: realCount);
+    }).toList();
+
+    if (_query.isEmpty) return list;
+    return list.where((loc) {
       return loc.name.toLowerCase().contains(_query) ||
           loc.zone.toLowerCase().contains(_query);
     }).toList();
