@@ -100,17 +100,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           // 1. Konten Scrollable
           Positioned.fill(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                24,
-                MediaQuery.of(context).padding.top + 20,
-                24,
-                118, // Ruang kosong untuk FloatingBottomNav
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child: RepaintBoundary(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  MediaQuery.of(context).padding.top + 20,
+                  24,
+                  118, // Ruang kosong untuk FloatingBottomNav
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   // Identitas Pengguna
                   Row(
                     children: [
@@ -375,6 +376,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
+        ),
 
           // 2. Fixed Floating Capsule Bottom Navigation Bar
           Positioned(

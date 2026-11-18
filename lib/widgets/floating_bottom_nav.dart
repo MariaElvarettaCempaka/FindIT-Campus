@@ -33,55 +33,56 @@ class _FloatingBottomNavState extends State<FloatingBottomNav> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 26),
-        child: Container(
-          height: 64,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF12302E).withValues(alpha: 0.08),
-                offset: const Offset(0, 10),
-                blurRadius: 28,
-                spreadRadius: -2,
-              ),
-              BoxShadow(
-                color: const Color(0xFF12302E).withValues(alpha: 0.03),
-                offset: const Offset(0, 2),
-                blurRadius: 6,
-                spreadRadius: 0,
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(32),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-              child: Container(
-                height: 64,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.white.withValues(alpha: 0.78),
-                      Colors.white.withValues(alpha: 0.65),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.90),
-                    width: 1.2,
-                  ),
+    return RepaintBoundary(
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 26),
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF12302E).withValues(alpha: 0.08),
+                  offset: const Offset(0, 10),
+                  blurRadius: 28,
+                  spreadRadius: -2,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
+                BoxShadow(
+                  color: const Color(0xFF12302E).withValues(alpha: 0.03),
+                  offset: const Offset(0, 2),
+                  blurRadius: 6,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+                child: Container(
+                  height: 64,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.70),
+                        Colors.white.withValues(alpha: 0.52),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.88),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
                     // Tab 0: Home
                     _buildTabItem(
                       index: 0,
@@ -123,8 +124,9 @@ class _FloatingBottomNavState extends State<FloatingBottomNav> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   /// Center Action (+) Coral Pill Button
   Widget _buildCenterPostButton() {

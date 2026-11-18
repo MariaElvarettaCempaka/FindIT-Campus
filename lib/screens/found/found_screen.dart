@@ -14,6 +14,8 @@ import '../../widgets/status_chip.dart';
 import '../search/search_screen.dart';
 import '../profile/profile_screen.dart';
 import '../post/post_report_screen.dart';
+import '../../models/report_item_model.dart';
+import '../../services/report_service.dart';
 
 /// Halaman Barang Ditemukan (Found Screen) — FindIT Campus
 ///
@@ -72,177 +74,9 @@ class _FoundScreenState extends State<FoundScreen> {
     'Aksesoris',
   ];
 
-  // Database Mock Barang Temuan Kampus UNESA dengan Proteksi Anti-Leakage & Galeri Foto
-  final List<Map<String, dynamic>> _foundItems = [
-    {
-      'id': 'found-1',
-      'title': 'Kunci Motor Honda Vario Hitam',
-      'category': 'Kunci',
-      'location': 'Gazebo Depan Gedung E1 FT Ketintang',
-      'campus': 'Ketintang',
-      'timeAgo': '25 menit lalu',
-      'storageType': 'satpam',
-      'storageLabel': 'Pos Satpam FT Ketintang',
-      'storageIcon': Icons.shield_outlined,
-      'holderName': 'Pak Joko (Satpam Jaga FT)',
-      'holderPhone': '081234567890',
-      'finderName': 'Farhan (Mahasiswa FT 2024)',
-      'imageAsset': 'assets/images/kunci_motor.jpg',
-      'images': [
-        'assets/images/kunci_motor.jpg',
-        'assets/images/raw_image_2.jpeg',
-      ],
-      'snippet':
-          'Ada gantungan kunci boneka kodok hijau, anak kunci kontak masih mulus lengkap dengan remote alarm.',
-      'claimRequirement':
-          'Pemilik wajib menyebutkan ciri gantungan kunci atau menunjukkan STNK asli saat pengambilan di posko.',
-      'securityQuestion':
-          'Apa warna gantungan boneka kecil pada anak kunci dan ada gantungan apa lagi di sampingnya?',
-      'requiredProof':
-          'Wajib menunjukkan STNK motor asli atau kunci cadangan motor saat serah terima.',
-      'operatingHours': 'Pos Jaga 24 Jam Non-stop (Depan Gerbang Utama FT)',
-      'isVerified': true,
-    },
-    {
-      'id': 'found-2',
-      'title': 'Dompet Lipat Cokelat Baellerry',
-      'category': 'Dompet',
-      'location': 'Loker Tas Perpustakaan Pusat Lt. 1',
-      'campus': 'Ketintang',
-      'timeAgo': '1 jam lalu',
-      'storageType': 'official',
-      'storageLabel': 'Meja Sirkulasi Perpus',
-      'storageIcon': Icons.account_balance_outlined,
-      'holderName': 'Ibu Ratna (Staf Layanan Perpus)',
-      'holderPhone': '081298765432',
-      'finderName': 'Rizky Pratama (Mahasiswa FEB 2023)',
-      'imageAsset': 'assets/images/dompet_kulit.jpg',
-      'images': [
-        'assets/images/dompet_kulit.jpg',
-        'assets/images/raw_image_3.jpeg',
-      ],
-      'snippet':
-          'Ditemukan di dalam loker nomor 42. Berisi kartu identitas dan uang tunai yang tersimpan utuh di brankas loket.',
-      'claimRequirement':
-          'Wajib menunjukkan KTM dan mencocokkan identitas kartu pengenal di dalam dompet.',
-      'securityQuestion':
-          'Sebutkan warna lapisan kain di dalam slot uang dan nama inisial pada kartu di dalamnya?',
-      'requiredProof':
-          'Wajib menunjukkan KTM asli & mencocokkan kartu identitas di dalam dompet.',
-      'operatingHours': 'Senin - Jumat, pukul 08.00 - 16.00 WIB (Meja Sirkulasi Lt. 1)',
-      'isVerified': true,
-    },
-    {
-      'id': 'found-3',
-      'title': 'Earphone TWS Baseus White Case',
-      'category': 'Elektronik',
-      'location': 'Ruang Kuliah 204 Gedung K10 FBS',
-      'campus': 'Lidah Wetan',
-      'timeAgo': '3 jam lalu',
-      'storageType': 'student',
-      'storageLabel': 'Dipegang Penemu (Mahasiswa)',
-      'storageIcon': Icons.person_pin_circle_outlined,
-      'holderName': 'Ayu Lestari (Pendidikan Bhs Inggris 24)',
-      'holderPhone': '085712345678',
-      'finderName': 'Ayu Lestari (Pendidikan Bhs Inggris 24)',
-      'imageAsset': 'assets/images/raw_image_4.png',
-      'images': [
-        'assets/images/raw_image_4.png',
-        'assets/images/raw_image_1.png',
-      ],
-      'snippet':
-          'Ketinggalan di laci meja baris ketiga dekat jendela. Baterai casing masih menyala indikator hijau.',
-      'claimRequirement':
-          'Sebutkan nama bluetooth device yang ter-pair atau coba hubungkan langsung ke smartphone di depan penemu.',
-      'securityQuestion':
-          'Sebutkan nama Bluetooth ID yang tersimpan di memori TWS atau warna lampu LED saat dibuka?',
-      'requiredProof':
-          'Buktikan koneksi pairing langsung ke HP pemilik di depan penemu saat janjian ketemuan.',
-      'operatingHours': 'Janjian langsung via WhatsApp di area Gedung FBS Lidah Wetan',
-      'isVerified': false,
-    },
-    {
-      'id': 'found-4',
-      'title': 'KTM UNESA a.n. Dimas Pratama (S1 TI)',
-      'category': 'KTM & Dokumen',
-      'location': 'Kantin Kejujuran Rektorat',
-      'campus': 'Ketintang',
-      'timeAgo': 'Kemarin, 16.30 WIB',
-      'storageType': 'satpam',
-      'storageLabel': 'Pos Satpam Rektorat',
-      'storageIcon': Icons.shield_outlined,
-      'holderName': 'Pak Bambang (Pos Utama Rektorat)',
-      'holderPhone': '081345678901',
-      'finderName': 'Ibu Siti (Pengelola Kantin)',
-      'imageAsset': null,
-      'images': <String>[],
-      'icon': Icons.badge_outlined,
-      'snippet':
-          'KTM beserta kartu presensi tertinggal di kasir kantin kejujuran setelah jam istirahat sore.',
-      'claimRequirement':
-          'Bawa bukti diri / login Siakadu aktif di ponselmu dan temui petugas satpam pos jaga barat.',
-      'securityQuestion':
-          'Sebutkan 3 digit terakhir NIM dan tanggal lahir pada kartu KTM?',
-      'requiredProof':
-          'Tunjukkan profil aktif Siakadu UNESA di ponselmu kepada petugas satpam.',
-      'operatingHours': 'Pos Satpam Utama Rektorat (Buka 24 Jam)',
-      'isVerified': true,
-    },
-    {
-      'id': 'found-5',
-      'title': 'Kalkulator Ilmiah Casio fx-991EX Classwiz',
-      'category': 'Elektronik',
-      'location': 'Laboratorium Komputer Gedung A3 FMIPA',
-      'campus': 'Ketintang',
-      'timeAgo': '2 hari lalu',
-      'storageType': 'official',
-      'storageLabel': 'Ruang Laboran Matematika',
-      'storageIcon': Icons.school_outlined,
-      'holderName': 'Mas Rizal (Laboran FMIPA)',
-      'holderPhone': '082134567890',
-      'finderName': 'Fajar Siddiq (Mahasiswa FMIPA 2023)',
-      'imageAsset': null,
-      'images': <String>[],
-      'icon': Icons.calculate_outlined,
-      'snippet':
-          'Tertinggal di meja PC nomor 14 sesudah sesi praktikum Komputasi Matematika.',
-      'claimRequirement':
-          'Sebutkan stiker atau coretan nama yang ada di balik tutup casing kalkulator.',
-      'securityQuestion':
-          'Ada coretan spidol/stiker kecil apa di balik penutup slide kalkulator?',
-      'requiredProof':
-          'Sebutkan mata kuliah dan nomor PC lab tempat praktikum berlangsung.',
-      'operatingHours': 'Senin - Jumat, pukul 08.00 - 15.30 WIB (Ruang Laboran Lt. 2)',
-      'isVerified': true,
-    },
-    {
-      'id': 'found-6',
-      'title': 'Tumbler Stainless LocknLock Hitam 500ml',
-      'category': 'Aksesoris',
-      'location': 'Gazebo Tengah Rektorat',
-      'campus': 'Ketintang',
-      'timeAgo': '3 hari lalu',
-      'storageType': 'satpam',
-      'storageLabel': 'Pos Satpam Barat',
-      'storageIcon': Icons.shield_outlined,
-      'holderName': 'Pak Hendra (Satpam)',
-      'holderPhone': '081223344556',
-      'finderName': 'Dimas Yoga (Mahasiswa FISH 2024)',
-      'imageAsset': null,
-      'images': <String>[],
-      'icon': Icons.local_drink_outlined,
-      'snippet':
-          'Botol minum stainless warna hitam matte dengan sedikit goresan halus di alas botol.',
-      'claimRequirement':
-          'Sebutkan warna tutup karet bagian dalam atau ciri goresan pada tumbler.',
-      'securityQuestion':
-          'Sebutkan bentuk stiker atau ciri goresan pada tumbler?',
-      'requiredProof':
-          'Sebutkan warna karet seal penutup bagian dalam.',
-      'operatingHours': 'Pos Satpam Gerbang Barat (Buka 24 Jam)',
-      'isVerified': false,
-    },
-  ];
+  // Kampus terpilih dari Location Command Palette
+  String get _selectedCampus =>
+      _currentCampusLocation.toLowerCase().contains('lidah') ? 'Lidah Wetan' : 'Ketintang';
 
   @override
   void initState() {
@@ -266,34 +100,41 @@ class _FoundScreenState extends State<FoundScreen> {
   }
 
   // ===========================================================================
-  // FILTER & SORT LOGIC
+  // FILTER & SORT LOGIC UNTUK REPORT FIRESTORE
   // ===========================================================================
-  List<Map<String, dynamic>> get _filteredItems {
+  List<ReportItemModel> _filterReports(List<ReportItemModel> items) {
     final query = _searchQuery.trim().toLowerCase();
     final selectedCategory = _categories[_selectedCategoryIndex];
 
-    return _foundItems.where((item) {
+    return items.where((item) {
       // Filter Kategori
-      if (selectedCategory != 'Semua' &&
-          item['category'] != selectedCategory) {
-        return false;
+      if (selectedCategory != 'Semua') {
+        final cat = item.category.toLowerCase();
+        final sel = selectedCategory.toLowerCase();
+        if (sel == 'elektronik') {
+          if (cat != 'elektronik' && cat != 'hp') return false;
+        } else if (sel.contains('ktm') || sel.contains('dokumen')) {
+          if (!cat.contains('ktm') && !cat.contains('dokumen')) return false;
+        } else if (cat != sel) {
+          return false;
+        }
       }
 
       // Filter Titik Penyimpanan (Storage Type)
       if (_selectedStorageFilter != 'semua' &&
-          item['storageType'] != _selectedStorageFilter) {
+          (item.storageType ?? 'satpam') != _selectedStorageFilter) {
         return false;
       }
 
       // Filter Query Pencarian
       if (query.isNotEmpty) {
-        final title = (item['title'] as String).toLowerCase();
-        final loc = (item['location'] as String).toLowerCase();
-        final snippet = (item['snippet'] as String).toLowerCase();
-        final storage = (item['storageLabel'] as String).toLowerCase();
+        final title = item.title.toLowerCase();
+        final loc = item.location.toLowerCase();
+        final desc = item.description.toLowerCase();
+        final storage = (item.storageLabel ?? '').toLowerCase();
         final matches = title.contains(query) ||
             loc.contains(query) ||
-            snippet.contains(query) ||
+            desc.contains(query) ||
             storage.contains(query);
         if (!matches) return false;
       }
@@ -302,9 +143,15 @@ class _FoundScreenState extends State<FoundScreen> {
     }).toList()
       ..sort((a, b) {
         if (!_isSortLatest) {
-          return _foundItems.indexOf(b).compareTo(_foundItems.indexOf(a));
+          if (a.createdAt != null && b.createdAt != null) {
+            return a.createdAt!.compareTo(b.createdAt!);
+          }
+          return a.id.compareTo(b.id);
         }
-        return _foundItems.indexOf(a).compareTo(_foundItems.indexOf(b));
+        if (a.createdAt != null && b.createdAt != null) {
+          return b.createdAt!.compareTo(a.createdAt!);
+        }
+        return b.id.compareTo(a.id);
       });
   }
 
@@ -334,6 +181,10 @@ class _FoundScreenState extends State<FoundScreen> {
   // ACTION SHEET DETAIL PENGAMBILAN & PROTEKSI ANTI-LEAKAGE BARANG TEMUAN
   // ===========================================================================
   void _showClaimDetailsModal(Map<String, dynamic> item) {
+    final reportId = item['id']?.toString() ?? '';
+    if (reportId.isNotEmpty) {
+      ReportService.incrementViewCount(reportId);
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1093,8 +944,6 @@ class _FoundScreenState extends State<FoundScreen> {
   // ===========================================================================
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredItems;
-
     return Scaffold(
       backgroundColor: AppColors.bgCanvas,
       body: Stack(
@@ -1107,7 +956,7 @@ class _FoundScreenState extends State<FoundScreen> {
               color: AppColors.actionPrimary,
               backgroundColor: AppColors.bgCanvas,
               onRefresh: () async {
-                await Future.delayed(const Duration(milliseconds: 700));
+                await Future.delayed(const Duration(milliseconds: 500));
                 if (mounted) {
                   setState(() {});
                   AppToast.success(
@@ -1117,50 +966,77 @@ class _FoundScreenState extends State<FoundScreen> {
                   );
                 }
               },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.screenInset,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    // 1. Header & Pemilih Kampus Aktif
-                    _buildHeader(context),
-                    const SizedBox(height: 16),
+              child: RepaintBoundary(
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.screenInset,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      // 1. Header & Pemilih Kampus Aktif
+                      _buildHeader(context),
+                      const SizedBox(height: 16),
 
-                    // 2. Search Bar Cepat
-                    _buildSearchBar(),
-                    const SizedBox(height: 14),
+                      // 2. Search Bar Cepat
+                      _buildSearchBar(),
+                      const SizedBox(height: 14),
 
-                    // 3. Banner Edukasi & Aksi Safe Handover
-                    _buildSafeHandoverBanner(),
-                    const SizedBox(height: 20),
+                      // 3. Banner Edukasi & Aksi Safe Handover
+                      _buildSafeHandoverBanner(),
+                      const SizedBox(height: 20),
 
-                    // 4. Gliding Category Chips
-                    _buildCategoryPills(),
-                    const SizedBox(height: 14),
+                      // 4. Gliding Category Chips
+                      _buildCategoryPills(),
+                      const SizedBox(height: 14),
 
-                    // 5. Storage Spot Quick Filter (Pos Satpam / Mahasiswa / Loket)
-                    _buildStorageFilterBar(),
-                    const SizedBox(height: 20),
+                      // 5. Storage Spot Quick Filter (Pos Satpam / Mahasiswa / Loket)
+                      _buildStorageFilterBar(),
+                      const SizedBox(height: 20),
 
-                    // 6. Section Title & Sort Counter
-                    _buildFeedSectionHeader(filtered.length),
-                    const SizedBox(height: 14),
+                      // 6 & 7. Section Title & Stream Feed Cards
+                      StreamBuilder<List<ReportItemModel>>(
+                        stream: ReportService.getReportsStream(
+                          isLost: false,
+                          campus: _selectedCampus,
+                        ),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 40),
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFF17695D),
+                                ),
+                              ),
+                            );
+                          }
 
-                    // 7. Feed Cards / Empty State
-                    if (filtered.isEmpty)
-                      _buildEmptyState()
-                    else
-                      ...filtered.map((item) => _buildFoundItemCard(item)),
+                          final rawReports = snapshot.data ?? [];
+                          final filtered = _filterReports(rawReports);
 
-                    // Spacer bawah agar konten tidak tertutup bottom navbar
-                    const SizedBox(height: 118),
-                  ],
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildFeedSectionHeader(filtered.length),
+                              const SizedBox(height: 14),
+                              if (filtered.isEmpty)
+                                _buildEmptyState()
+                              else
+                                ...filtered.map((item) => _buildFoundItemCard(item.toFoundItemMap())),
+                            ],
+                          );
+                        },
+                      ),
+
+                      // Spacer bawah agar konten tidak tertutup bottom navbar
+                      const SizedBox(height: 118),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1205,69 +1081,15 @@ class _FoundScreenState extends State<FoundScreen> {
                     ),
                   ),
                 ).then((newReport) {
-                  if (newReport != null && mounted) {
-                    final storageType =
-                        newReport['storageType'] as String? ?? 'student';
-                    final storageLabel = newReport['storageLabel'] as String? ??
-                        'Dipegang Penemu';
-                    final holderName =
-                        (newReport['holderName'] as String?)?.isNotEmpty == true
-                            ? newReport['holderName']
-                            : (storageType == 'satpam'
-                                ? 'Petugas Satpam'
-                                : 'Kamu (Penemu)');
-                    final phone =
-                        newReport['phone'] as String? ?? '081234567890';
-                    final mapsUrl = newReport['mapsUrl'] as String?;
-
-                    setState(() {
-                      _foundItems.insert(0, {
-                        'id': 'found-${DateTime.now().millisecondsSinceEpoch}',
-                        'title': newReport['title'],
-                        'category': newReport['category'],
-                        'location': newReport['location'],
-                        'campus': newReport['campus'] ?? activeCampus,
-                        'timeAgo': newReport['timeSession'] != null
-                            ? 'Baru saja (${newReport['timeSession']})'
-                            : 'Baru saja',
-                        'date': newReport['date'],
-                        'timeSession': newReport['timeSession'],
-                        'storageType': storageType,
-                        'storageLabel': storageLabel,
-                        'storageDesc': storageType == 'satpam'
-                            ? 'Barang diamankan di pos satpam kampus.'
-                            : (storageType == 'official'
-                                ? 'Barang diamankan di loket resmi kampus.'
-                                : 'Barang saat ini dipegang oleh penemu.'),
-                        'storageIcon': storageType == 'satpam'
-                            ? Icons.shield_outlined
-                            : (storageType == 'official'
-                                ? Icons.account_balance_outlined
-                                : Icons.backpack_outlined),
-                        'status': ReportStatus.found,
-                        'isUrgent': false,
-                        'viewCount': 1,
-                        'finderName': 'Kamu',
-                        'finderRole': 'Mahasiswa · UNESA',
-                        'holderName': holderName,
-                        'holderPhone': phone,
-                        'finderPhone': phone,
-                        'finderWhatsapp': phone,
-                        'mapsUrl': mapsUrl,
-                        'operatingHours': storageType == 'satpam'
-                            ? 'Pos Jaga 24 Jam Non-stop'
-                            : (storageType == 'official'
-                                ? 'Jam Kerja Kampus (08.00 - 16.00 WIB)'
-                                : 'Sesuai koordinasi via WhatsApp'),
-                        'description': newReport['description'],
-                        'snippet': newReport['description'],
-                        'claimRequirement':
-                            'Wajib mencocokkan ciri khusus atau kartu identitas.',
-                        'requiredProof':
-                            'Wajib menunjukkan bukti sah saat serah terima barang.',
-                        'isVerified': true,
-                      });
-                    });
+                  if (mounted && newReport != null) {
+                    setState(() {});
+                    if (context.mounted) {
+                      AppToast.success(
+                        context,
+                        title: 'Laporan Dibuat 🎉',
+                        message: 'Barang temuan berhasil dicatat dalam katalog.',
+                      );
+                    }
                   }
                 });
               },
@@ -1842,9 +1664,9 @@ class _FoundScreenState extends State<FoundScreen> {
                     width: 76,
                     height: 76,
                     color: const Color(0xFFBFE9DA).withValues(alpha: 0.30),
-                    child: item['imageAsset'] != null
-                        ? Image.asset(
-                            item['imageAsset'] as String,
+                    child: (item['imageUrl'] != null && (item['imageUrl'] as String).isNotEmpty)
+                        ? Image.network(
+                            item['imageUrl'] as String,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) => const Center(
                               child: Icon(
@@ -1854,14 +1676,26 @@ class _FoundScreenState extends State<FoundScreen> {
                               ),
                             ),
                           )
-                        : Center(
-                            child: Icon(
-                              item['icon'] as IconData? ??
-                                  Icons.inventory_2_outlined,
-                              color: const Color(0xFF17695D),
-                              size: 32,
-                            ),
-                          ),
+                        : (item['imageAsset'] != null
+                            ? Image.asset(
+                                item['imageAsset'] as String,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => const Center(
+                                  child: Icon(
+                                    Icons.image_not_supported_outlined,
+                                    color: Color(0xFF17695D),
+                                    size: 28,
+                                  ),
+                                ),
+                              )
+                            : Center(
+                                child: Icon(
+                                  item['icon'] as IconData? ??
+                                      Icons.inventory_2_outlined,
+                                  color: const Color(0xFF17695D),
+                                  size: 32,
+                                ),
+                              )),
                   ),
                 ),
                 const SizedBox(width: 14),

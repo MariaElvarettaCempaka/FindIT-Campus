@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/smooth_page_route.dart';
@@ -9,6 +10,7 @@ import '../profile/profile_screen.dart';
 import '../post/post_report_screen.dart';
 import '../detail/detail_screen.dart';
 import '../../models/report_item_model.dart';
+import '../../services/report_service.dart';
 
 /// Halaman Pencarian Interaktif (Figma Node 181:2536, 181:2559, & 181:2664).
 /// Menggabungkan 3 state visual dinamis:
@@ -30,100 +32,10 @@ class _SearchScreenState extends State<SearchScreen> {
   int _currentNavIndex = 1; // Tab 'Hilang' / Search
   bool _isBackPressed = false;
 
-  // Data mock feed untuk pencarian kampus
-  final List<Map<String, dynamic>> _allItems = [
-    {
-      'title': 'Dompet kulit hitam',
-      'location': 'Gedung Perkuliahan, Lt. 2',
-      'date': '12 Okt 2026',
-      'category': 'Dompet',
-      'timeAgo': '2 jam lalu',
-      'status': ReportStatus.lost,
-      'imageAsset': 'assets/images/dompet_kulit.jpg',
-      'description':
-          'Dompet hitam berisi KTM dan SIM. Terakhir terlihat di dekat tangga lantai 2.',
-      'reporterName': 'Rizky',
-      'reporterRole': 'Mahasiswa · SI 2024',
-    },
-    {
-      'title': 'Dompet kartu coklat',
-      'location': 'Kantin Barat • Meja 3',
-      'date': '11 Okt 2026',
-      'category': 'Dompet',
-      'timeAgo': '1 hari lalu',
-      'status': ReportStatus.found,
-      'icon': Icons.inventory_2_outlined,
-      'description':
-          'Dompet kartu warna coklat muda tertinggal di kursi kantin barat.',
-      'reporterName': 'Siti',
-      'reporterRole': 'Mahasiswa · SI 2023',
-    },
-    {
-      'title': 'Dompet lipat Eiger',
-      'location': 'Lab Komputer 3',
-      'date': '10 Okt 2026',
-      'category': 'Dompet',
-      'timeAgo': '3 hari lalu',
-      'status': ReportStatus.lost,
-      'icon': Icons.inventory_2_outlined,
-      'description':
-          'Dompet lipat merk Eiger warna abu-abu hitam, ada kartu flash.',
-      'reporterName': 'Dimas',
-      'reporterRole': 'Mahasiswa · TI 2022',
-    },
-    {
-      'title': 'Kunci motor Honda',
-      'location': 'Stasiun UI, Beji',
-      'date': '29 Okt 2026',
-      'category': 'Elektronik',
-      'timeAgo': '12 menit lalu',
-      'status': ReportStatus.found,
-      'imageAsset': 'assets/images/kunci_motor.jpg',
-      'description':
-          'Gantungan kunci tali hitam berlogo Honda Vario ditemukan di area loket.',
-      'reporterName': 'Ahmad',
-      'reporterRole': 'Staff Perpustakaan',
-    },
-    {
-      'title': 'Tas laptop hitam',
-      'location': 'Gedung Kuliah FISIP',
-      'date': '28 Okt 2026',
-      'category': 'Elektronik',
-      'timeAgo': '45 menit lalu',
-      'status': ReportStatus.lost,
-      'icon': Icons.inventory_2_outlined,
-      'description':
-          'Merk Asus ROG hitam, tertinggal di kursi baris ke-3 lantai 1.',
-      'reporterName': 'Farhan',
-      'reporterRole': 'Mahasiswa · FISIP 2024',
-    },
-    {
-      'title': 'Kacamata hitam frame bulat',
-      'location': 'Perpustakaan UI Lt. 1',
-      'date': '28 Okt 2026',
-      'category': 'Lainnya',
-      'timeAgo': '1 jam lalu',
-      'status': ReportStatus.found,
-      'icon': Icons.inventory_2_outlined,
-      'description':
-          'Lensa minus dengan kotak kacamata warna cokelat di meja baca.',
-      'reporterName': 'Nadia',
-      'reporterRole': 'Mahasiswa · FIB 2023',
-    },
-    {
-      'title': 'Ponsel pintar merah',
-      'location': 'Kantin FISIP',
-      'date': '28 Okt 2026',
-      'category': 'Elektronik',
-      'timeAgo': '30 menit lalu',
-      'status': ReportStatus.lost,
-      'icon': Icons.inventory_2_outlined,
-      'description':
-          'Casing transparan dengan stiker kucing di belakang.',
-      'reporterName': 'Budi',
-      'reporterRole': 'Mahasiswa · FMIPA 2024',
-    },
-  ];
+  // State pencarian live Firestore
+  List<ReportItemModel> _searchResults = [];
+  bool _isSearching = false;
+  Timer? _debounceTimer;
 
   final List<String> _suggestions = [
     'dompet kulit hitam',
@@ -141,36 +53,64 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _searchController = TextEditingController(text: widget.initialQuery ?? '');
-    _searchController.addListener(() {
-      setState(() {});
-    });
+    _searchController.addListener(_onSearchChanged);
+    if (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) {
+      _performSearch(widget.initialQuery!.trim());
+    }
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
   }
 
-  List<Map<String, dynamic>> _getFilteredItems(String query) {
-    final cleanQuery = query.trim().toLowerCase();
-    if (cleanQuery.isEmpty) return [];
-    return _allItems.where((item) {
-      final title = (item['title'] as String).toLowerCase();
-      final category = (item['category'] as String).toLowerCase();
-      final location = (item['location'] as String).toLowerCase();
-      return title.contains(cleanQuery) ||
-          category.contains(cleanQuery) ||
-          location.contains(cleanQuery);
-    }).toList();
+  void _onSearchChanged() {
+    final q = _searchController.text.trim();
+    _debounceTimer?.cancel();
+    if (q.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
+    }
+    setState(() {
+      _isSearching = true;
+    });
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+      _performSearch(q);
+    });
+  }
+
+  Future<void> _performSearch(String query) async {
+    if (!mounted) return;
+    setState(() => _isSearching = true);
+    try {
+      final results = await ReportService.searchReports(query);
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isSearching = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _searchResults = [];
+          _isSearching = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final query = _searchController.text.trim();
     final isQueryEmpty = query.isEmpty;
-    final results = _getFilteredItems(query);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFBF8F3), // AppColors.bgCanvas
@@ -192,27 +132,31 @@ class _SearchScreenState extends State<SearchScreen> {
 
                 const SizedBox(height: 16),
 
-                // Body Content berdasarkan State (Typing, Results, atau Empty)
+                // Body Content berdasarkan State (Typing, Loading, Results, atau Empty)
                 Expanded(
                   child: ScrollConfiguration(
                     behavior:
                         const ScrollBehavior().copyWith(scrollbars: false),
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (isQueryEmpty)
-                            _buildTypingState()
-                          else if (results.isNotEmpty)
-                            _buildResultsState(results, query)
-                          else
-                            _buildEmptyState(query),
+                    child: RepaintBoundary(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 22),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (isQueryEmpty)
+                              _buildTypingState()
+                            else if (_isSearching)
+                              _buildLoadingState()
+                            else if (_searchResults.isNotEmpty)
+                              _buildResultsState(_searchResults, query)
+                            else
+                              _buildEmptyState(query),
 
-                          // Spacer bawah agar konten tidak tertutup bottom navbar
-                          const SizedBox(height: 120),
-                        ],
+                            // Spacer bawah agar konten tidak tertutup bottom navbar
+                            const SizedBox(height: 120),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -257,20 +201,10 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                 ).then((newReport) {
                   if (newReport != null && mounted) {
-                    setState(() {
-                      _allItems.insert(0, {
-                        'title': newReport['title'] ?? 'Laporan Baru',
-                        'location': newReport['location'] ?? 'Kampus UNESA',
-                        'date': newReport['date'] ?? 'Hari ini',
-                        'category': newReport['category'] ?? 'Lainnya',
-                        'timeAgo': 'Baru saja',
-                        'status': newReport['type'] == ReportType.lost
-                            ? ReportStatus.lost
-                            : ReportStatus.found,
-                        'imageAsset': newReport['image'] ?? 'assets/images/dompet_kulit.jpg',
-                        'description': newReport['description'] ?? '',
-                      });
-                    });
+                    final query = _searchController.text.trim();
+                    if (query.isNotEmpty) {
+                      _performSearch(query);
+                    }
                   }
                 });
               },
@@ -552,10 +486,22 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  Widget _buildLoadingState() {
+    return const Padding(
+      padding: EdgeInsets.only(top: 80),
+      child: Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF17695D),
+          strokeWidth: 2.5,
+        ),
+      ),
+    );
+  }
+
   // ===========================================================================
   // 3. STATE 2: HASIL PENCARIAN (Figma Node 181:2559)
   // ===========================================================================
-  Widget _buildResultsState(List<Map<String, dynamic>> results, String query) {
+  Widget _buildResultsState(List<ReportItemModel> results, String query) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -572,22 +518,24 @@ class _SearchScreenState extends State<SearchScreen> {
 
         // List Hasil Pencarian
         ...results.map((item) {
+          final isLost = item.isLost;
           return ItemCard(
-            title: item['title'] as String,
-            location: item['location'] as String,
-            timeAgo: item['timeAgo'] as String,
-            status: item['status'] as ReportStatus,
-            imageAsset: item['imageAsset'] as String?,
-            icon: item['icon'] as IconData?,
-            snippet: item['description'] as String?,
+            title: item.title,
+            location: '${item.location} • ${item.timeAgo}',
+            timeAgo: item.timeAgo,
+            status: item.isLost ? ReportStatus.lost : ReportStatus.found,
+            imageUrl: item.imageUrl,
+            imageAsset: item.imageAsset,
+            snippet: item.description,
             onTap: () {
-              final isLost = item['status'] == ReportStatus.lost;
+              if (item.id.isNotEmpty) {
+                ReportService.incrementViewCount(item.id);
+              }
               if (isLost) {
-                final model = ReportItemModel.fromMap(item);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => DetailScreen(report: model),
+                    builder: (_) => DetailScreen(report: item),
                   ),
                 );
               } else {

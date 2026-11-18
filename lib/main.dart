@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'core/app_colors.dart';
 import 'core/app_dimens.dart';
 import 'core/app_theme.dart';
@@ -6,8 +8,11 @@ import 'screens/auth/splash_screen.dart';
 import 'widgets/app_button.dart';
 import 'widgets/status_chip.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const FindITCampusApp());
 }
 
