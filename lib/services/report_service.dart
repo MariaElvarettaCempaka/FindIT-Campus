@@ -153,4 +153,34 @@ class ReportService {
       return null;
     }
   }
+
+  /// Membuat dan menyimpan dokumen laporan baru ke Cloud Firestore (Modul Orang 3 - Faiq)
+  static Future<String> createReport(Map<String, dynamic> reportData) async {
+    final docRef = await _reportsCollection.add({
+      ...reportData,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'CreatedAt': FieldValue.serverTimestamp(),
+      'Updatedat': FieldValue.serverTimestamp(),
+    });
+
+    // Perbarui statistik laporan pada koleksi users jika userId tersedia
+    final userId = reportData['userId']?.toString() ?? reportData['User id']?.toString();
+    if (userId != null && userId.isNotEmpty && !userId.startsWith('guest_')) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(userId).update({
+          'totalPostingan': FieldValue.increment(1),
+          'laporanAktif': FieldValue.increment(1),
+          'Totalpostingan': FieldValue.increment(1),
+          'Laporanaktif': FieldValue.increment(1),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'Updated_at': FieldValue.serverTimestamp(),
+        });
+      } catch (_) {
+        // Toleransi jika dokumen user belum terdaftar
+      }
+    }
+
+    return docRef.id;
+  }
 }

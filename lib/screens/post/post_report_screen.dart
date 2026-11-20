@@ -10,6 +10,10 @@ import '../../core/campus_locations.dart';
 import '../../core/smooth_page_route.dart';
 import '../../widgets/app_toast_stack.dart';
 import '../../widgets/floating_bottom_nav.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/auth_service.dart';
+import '../../services/cloudinary_service.dart';
+import '../../services/report_service.dart';
 import '../found/found_screen.dart';
 import '../search/search_screen.dart';
 import '../profile/profile_screen.dart';
@@ -108,6 +112,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
 
   // State Kampus & Smart Autocomplete Lokasi (Ketintang & Lidah Wetan)
   late String _selectedCampus;
+  String? _selectedCampusLocationId;
   List<CampusLocation> _locationSuggestions = [];
   bool _showLocationSuggestions = false;
 
@@ -778,57 +783,178 @@ class _PostReportScreenState extends State<PostReportScreen> {
       return;
     }
 
-    // Eksekusi publish
+    // Eksekusi publish asinkron ke Cloudinary & Cloud Firestore
     setState(() => _isPublishing = true);
 
-    Future.delayed(const Duration(milliseconds: 900), () {
-      if (!mounted) return;
-      setState(() => _isPublishing = false);
+    () async {
+      try {
+        // 1. Upload foto ke Cloudinary jika foto dipilih pengguna
+        String? uploadedImageUrl;
+        if (_selectedImage != null) {
+          if (mounted) {
+            AppToast.info(
+              context,
+              title: 'Mengunggah Media',
+              message: 'Mengunggah foto barang ke Cloudinary CDN...',
+            );
+          }
+          uploadedImageUrl = await CloudinaryService.uploadImage(_selectedImage!);
+        }
 
-      // Label penyimpanan ramah pembaca
-      String storageLabel;
-      if (_selectedType == ReportType.lost) {
-        storageLabel = 'Dipegang Pemilik';
-      } else if (_selectedStorageType == 'student') {
-        storageLabel = 'Dipegang Penemu';
-      } else if (_storageLocationController.text.trim().isNotEmpty) {
-        storageLabel = _storageLocationController.text.trim();
-      } else {
-        storageLabel = _selectedStorageType == 'satpam'
-            ? 'Pos Satpam Kampus'
-            : 'Loket / Posko';
+        // 2. Data Pelapor (denormalisasi profil civitas)
+        final currentUser = AuthService.instance.currentUser;
+        final currentUserId = currentUser?.uid ??
+            FirebaseAuth.instance.currentUser?.uid ??
+            'guest_${DateTime.now().millisecondsSinceEpoch}';
+        final reporterName = currentUser?.nama.isNotEmpty == true
+            ? currentUser!.nama
+            : 'Civitas UNESA';
+        final reporterRole = currentUser?.peran.isNotEmpty == true
+            ? currentUser!.peran
+            : 'Mahasiswa UNESA';
+        final reporterPhone = _phoneController.text.trim();
+
+        // 3. Label & detail penyimpanan fisik
+        final isLost = _selectedType == ReportType.lost;
+        String storageLabel;
+        if (isLost) {
+          storageLabel = 'Dipegang Pemilik';
+        } else if (_selectedStorageType == 'student') {
+          storageLabel = 'Dipegang Penemu';
+        } else if (_storageLocationController.text.trim().isNotEmpty) {
+          storageLabel = _storageLocationController.text.trim();
+        } else {
+          storageLabel = _selectedStorageType == 'satpam'
+              ? 'Pos Satpam Kampus'
+              : 'Loket / Posko';
+        }
+
+        final title = _nameController.text.trim();
+        final category = _categories[_selectedCategoryIndex];
+        final location = _locationController.text.trim();
+        final date = _dateController.text.trim();
+        final description = _descriptionController.text.trim();
+
+        // 4. Resolusi ID Lokasi Kampus (FK ke campus_locations.id sesuai ERD)
+        String? resolvedLocationId = _selectedCampusLocationId;
+        if (resolvedLocationId == null && location.isNotEmpty) {
+          final matched = searchCampusLocations(location);
+          if (matched.isNotEmpty) {
+            resolvedLocationId = matched.first.id;
+          }
+        }
+
+        final holderName = _holderNameController.text.trim().isNotEmpty
+            ? _holderNameController.text.trim()
+            : (isLost ? reporterName : 'Petugas Jaga');
+
+        final operatingHours = _selectedStorageType == 'satpam'
+            ? 'Pos Jaga 24 Jam Non-stop'
+            : 'Jam Kerja Kampus (08.00 - 16.00 WIB)';
+
+        final mapsUrl = _mapsUrlController.text.trim();
+        final requiredProof = isLost
+            ? null
+            : 'Wajib menunjukkan kartu identitas atau bukti fisik saat serah terima.';
+        final claimRequirement = isLost
+            ? null
+            : 'Sebutkan ciri khusus yang disamarkan kepada pihak penyimpan.';
+
+        // 5. Susun dokumen Firestore sesuai ERD resmi (kompatibilitas dual-case)
+        final firestoreData = {
+          'userId': currentUserId,
+          'User id': currentUserId,
+          'title': title,
+          'Title': title,
+          'titleLower': title.toLowerCase(),
+          'Titlelower': title.toLowerCase(),
+          'category': category,
+          'Category': category,
+          'isLost': isLost,
+          'islost': isLost,
+          'status': 'Dalam Proses',
+          'Status': 'Dalam Proses',
+          'location': location,
+          'Location': location,
+          'campus': _selectedCampus,
+          'Campus': _selectedCampus,
+          'campusLocationId': resolvedLocationId,
+          'Campuslocationid': resolvedLocationId,
+          'date': date,
+          'Date': date,
+          'timeSession': _selectedTimeSession,
+          'Timesession': _selectedTimeSession,
+          'description': description,
+          'Description': description,
+          'reporterName': reporterName,
+          'Reportname': reporterName,
+          'reporterRole': reporterRole,
+          'ReportRole': reporterRole,
+          'reporterPhone': reporterPhone,
+          'Reportphone': reporterPhone,
+          'reporterPhotoUrl': FirebaseAuth.instance.currentUser?.photoURL,
+          'ReporterPhotoUrl': FirebaseAuth.instance.currentUser?.photoURL,
+          'imageUrl': uploadedImageUrl,
+          'Imageurl': uploadedImageUrl,
+          'images': uploadedImageUrl != null ? [uploadedImageUrl] : <String>[],
+          'Image': uploadedImageUrl != null ? [uploadedImageUrl] : <String>[],
+          'viewsCount': 0,
+          'Viewscount': 0,
+          'responsesCount': 0,
+          'Responsescount': 0,
+          'resolvedDate': null,
+          'ResolvedDate': null,
+          'storageType': isLost ? 'student' : _selectedStorageType,
+          'Storagetype': isLost ? 'student' : _selectedStorageType,
+          'storageLabel': storageLabel,
+          'Storagelabel': storageLabel,
+          'holderName': holderName,
+          'Holdername': holderName,
+          'holderPhone': reporterPhone,
+          'Holderphone': reporterPhone,
+          'operatingHours': operatingHours,
+          'Operatinghours': operatingHours,
+          'mapsUrl': mapsUrl,
+          'requiredProof': requiredProof,
+          'Requiredproof': requiredProof,
+          'claimRequirement': claimRequirement,
+          'ClaimRequirement': claimRequirement,
+          'isVerified': true,
+        };
+
+        // 6. Simpan dokumen laporan ke Cloud Firestore
+        final docId = await ReportService.createReport(firestoreData);
+        debugPrint('[PostReportScreen] Laporan sukses tersimpan di Firestore ID: $docId');
+
+        if (!mounted) return;
+        setState(() => _isPublishing = false);
+
+        AppToast.success(
+          context,
+          title: 'Laporan Diterbitkan!',
+          message:
+              'Laporan "$title" berhasil disimpan ke Firestore & dipublikasikan ke feed kampus.',
+        );
+
+        // Kembali ke layar sebelumnya dengan membawa data laporan baru
+        Navigator.pop(context, {
+          'id': docId,
+          ...firestoreData,
+          'image': _selectedImage?.path,
+          'createdAt': DateTime.now(),
+        });
+      } catch (e) {
+        debugPrint('[PostReportScreen] Error publish laporan: $e');
+        if (!mounted) return;
+        setState(() => _isPublishing = false);
+
+        AppToast.error(
+          context,
+          title: 'Gagal Menerbitkan',
+          message: 'Terjadi kendala saat menerbitkan laporan: $e',
+        );
       }
-
-      final reportData = {
-        'title': _nameController.text.trim(),
-        'category': _categories[_selectedCategoryIndex],
-        'phone': _phoneController.text.trim(),
-        'location': _locationController.text.trim(),
-        'campus': _selectedCampus,
-        'date': _dateController.text.trim(),
-        'timeSession': _selectedTimeSession,
-        'description': _descriptionController.text.trim(),
-        'type': _selectedType,
-        'storageType': _selectedType == ReportType.found
-            ? _selectedStorageType
-            : 'student',
-        'storageLabel': storageLabel,
-        'holderName': _holderNameController.text.trim(),
-        'mapsUrl': _mapsUrlController.text.trim(), // Link Maps Opsional
-        'image': _selectedImage?.path,
-        'createdAt': DateTime.now(),
-      };
-
-      AppToast.success(
-        context,
-        title: 'Laporan Diterbitkan!',
-        message:
-            'Laporan "${_nameController.text.trim()}" berhasil dipublikasikan ke civitas kampus.',
-      );
-
-      // Kembali ke layar sebelumnya dengan membawa data laporan baru
-      Navigator.pop(context, reportData);
-    });
+    }();
   }
 
   @override
@@ -2105,6 +2231,7 @@ class _PostReportScreenState extends State<PostReportScreen> {
                                 setState(() {
                                   _locationController.text = loc.name;
                                   _selectedCampus = loc.campus;
+                                  _selectedCampusLocationId = loc.id;
                                   _showLocationSuggestions = false;
                                   _locationError = null;
                                 });
